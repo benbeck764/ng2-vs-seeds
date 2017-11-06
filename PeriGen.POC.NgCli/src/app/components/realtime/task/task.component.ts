@@ -34,7 +34,7 @@ export class TaskComponent implements OnInit {
       (error: any) => {
         console.warn("Attempt to join channel failed!", error);
       }
-    )
+    );
   }
 
 

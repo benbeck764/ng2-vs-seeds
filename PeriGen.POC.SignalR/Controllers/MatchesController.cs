@@ -12,19 +12,19 @@ using PeriGen.POC.SignalR.Hub;
 
 namespace PeriGen.POC.SignalR.Controllers
 {
-    [RoutePrefix("matches")]
+    [RoutePrefix("api/matches")]
     public class MatchesController : ApiController
     {
         private readonly IHubContext _context;
-        private string _channel = "TestChannel";
+        private const string Channel = "TestChannel";
 
         public MatchesController()
         {
             _context = GlobalHost.ConnectionManager.GetHubContext<EventHub>();
         }
 
-        [HttpGet]
         [Route("latestmatches")]
+        [HttpGet]
         public async Task<IHttpActionResult> GetLastTenSecondsOfMatches()
         {
             for (var i = 0; i < 10; i++)
@@ -32,7 +32,7 @@ namespace PeriGen.POC.SignalR.Controllers
                 var matches = await ApiCaller.GetLastTenSecondsOfMatches();
                 foreach (var match in matches)
                 {
-                    _context.Clients.Group(_channel).OnEvent("TestChannel", new ChannelEvent
+                    _context.Clients.Group(Channel).OnEvent("TestChannel", new ChannelEvent
                     {
                         ChannelName = "TestChannel",
                         Name = "Dota2MatchDetails",

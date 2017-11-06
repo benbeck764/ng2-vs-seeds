@@ -4,11 +4,11 @@ namespace PeriGen.POC.SignalR.Models.Dota2API.MatchHistory
 {
     public class MatchHistoryPlayer
     {
-        [JsonProperty("account_id")]
+        [JsonProperty("accountId")]
         public long AccountId { get; set; }
-        [JsonProperty("player_slot")]
+        [JsonProperty("playerSlot")]
         public int PlayerSlot { get; set; }
-        [JsonProperty("hero_id")]
+        [JsonProperty("heroId")]
         public int HeroId { get; set; }
     }
 }

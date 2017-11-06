@@ -3,12 +3,14 @@ import { Routes, RouterModule } from '@angular/router';
 import { DashboardComponent } from "./components/dashboard/dashboard.component";
 import { ChartsComponent } from "./components/charts/charts.component";
 import { RealtimeComponent } from "./components/realtime/realtime.component";
+import { DemoComponent } from "./components/demo/demo.component";
 
 const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'charts', component: ChartsComponent },
   { path: 'realtime', component: RealtimeComponent },
+  { path: 'demo', component: DemoComponent },
   { path: '**', redirectTo: 'dashboard' }
 ];
 

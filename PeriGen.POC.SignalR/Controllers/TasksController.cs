@@ -5,7 +5,7 @@ using PeriGen.POC.SignalR.Hub;
 
 namespace PeriGen.POC.SignalR.Controllers
 {
-    [RoutePrefix("tasks")]
+    [RoutePrefix("api/tasks")]
     public class TaskController : ApiController
     {
         private readonly IHubContext _context;

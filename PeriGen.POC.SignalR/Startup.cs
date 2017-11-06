@@ -13,10 +13,6 @@ namespace PeriGen.POC.SignalR
             app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);
 
             app.MapSignalR();
-
-            var httpConfig = new HttpConfiguration();
-            httpConfig.MapHttpAttributeRoutes();
-            app.UseWebApi(httpConfig);
         }
     }
 }
