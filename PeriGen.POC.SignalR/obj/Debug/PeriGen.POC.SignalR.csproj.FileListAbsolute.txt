@@ -35,3 +35,6 @@ C:\dev\PeriGen.POC\PeriGen.POC.SignalR\obj\Debug\PeriGen.POC.SignalR.csprojResol
 C:\dev\PeriGen.POC\PeriGen.POC.SignalR\obj\Debug\PeriGen.POC.SignalR.csproj.CoreCompileInputs.cache
 C:\dev\PeriGen.POC\PeriGen.POC.SignalR\obj\Debug\PeriGen.POC.SignalR.dll
 C:\dev\PeriGen.POC\PeriGen.POC.SignalR\obj\Debug\PeriGen.POC.SignalR.pdb
+C:\dev\PeriGen.POC\PeriGen.POC.SignalR\bin\Microsoft.Web.Infrastructure.dll
+C:\dev\PeriGen.POC\PeriGen.POC.SignalR\bin\Swashbuckle.Core.dll
+C:\dev\PeriGen.POC\PeriGen.POC.SignalR\bin\WebActivatorEx.dll
