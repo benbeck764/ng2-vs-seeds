@@ -2,12 +2,13 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { DashboardComponent } from "./components/dashboard/dashboard.component";
 import { ChartsComponent } from "./components/charts/charts.component";
+import { RealtimeComponent } from "./components/realtime/realtime.component";
 
 const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'charts', component: ChartsComponent },
-  //{ path: 'about', component: FetchDataComponent },
+  { path: 'realtime', component: RealtimeComponent },
   { path: '**', redirectTo: 'dashboard' }
 ];
 
