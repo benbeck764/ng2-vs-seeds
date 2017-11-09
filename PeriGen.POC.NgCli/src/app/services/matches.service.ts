@@ -1,19 +1,19 @@
 import { Injectable } from '@angular/core';
-import { Http } from "@angular/http";
+import { Http, Response } from "@angular/http";
 import { Observable } from "rxjs/Observable";
 
 export class Player {
-  accountId: number;
-  playerSlot: number;
-  heroId: number;
+  account_id: number;
+  player_slot: number;
+  hero_id: number;
 }
 
 export class Match {
-  matchId: number;
-  matchSeqNum: number;
-  lobbyType: number;
-  radiantTeamId: number;
-  direTeamId: number;
+  match_id: number;
+  match_seq_num: number;
+  lobby_type: number;
+  radiant_team_id: number;
+  dire_team_id: number;
   players: Player[];
 }
 
@@ -22,14 +22,10 @@ export class MatchesService {
 
   private getLatestMatchesUri: string = "http://localhost:56682/api/matches/latestmatches";
 
-  constructor(private _http: Http) {
-    
-  }
+  constructor(private _http: Http) { }
 
-  getLatestMatches(): Observable<Match[]> {
-    return this._http.get(this.getLatestMatchesUri)
-      .map(matches => matches.json() as Match[])
-      .catch(this.handleError);
+  getLatestMatches(): Observable<Response> {
+    return this._http.get(this.getLatestMatchesUri);
   }
 
   private handleError(error: any): Promise<any> {

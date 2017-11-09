@@ -1,15 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using PeriGen.POC.SignalR.Models;
-using PeriGen.POC.SignalR.Models.Dota2API.Hero;
-using PeriGen.POC.SignalR.Models.Dota2API.Item;
-using PeriGen.POC.SignalR.Models.Dota2API.MatchDetails;
 using PeriGen.POC.SignalR.Models.Dota2API.MatchHistory;
 
 namespace PeriGen.POC.SignalR.DotaApi
@@ -30,12 +23,12 @@ namespace PeriGen.POC.SignalR.DotaApi
         public static string HeroImagesUri { get; } = "http://cdn.dota2.com/apps/dota2/images/heroes/";
         public static string ItemImagesUri { get; } = "http://cdn.dota2.com/apps/dota2/images/items/";
 
-        public static async Task<List<MatchHistoryMatch>> GetLastTenSecondsOfMatches()
+        public static async Task<List<MatchHistoryMatch>> GetMatches()
         {
             var utcNow = DateTimeOffset.UtcNow;
-            var utcTenSecondsAgo = DateTimeOffset.UtcNow.AddSeconds(-10);
-            var start = utcTenSecondsAgo.ToUnixTimeSeconds();
-            var end = utcNow.ToUnixTimeSeconds();
+            var utcOneDayAgo = DateTimeOffset.UtcNow.AddDays(-1);
+            var start = utcOneDayAgo.ToUnixTimeMilliseconds();
+            var end = utcNow.ToUnixTimeMilliseconds();
 
             var apiUrlMatchHistory = MatchHistoryUri + $"?key={DevKey}" + $"&format={Format}" + $"&date_min={start}" + $"&date_max={end}";
             var requestMatchHistory = HttpManager.InitHttpRequest(HttpMethod.Get, null, apiUrlMatchHistory);

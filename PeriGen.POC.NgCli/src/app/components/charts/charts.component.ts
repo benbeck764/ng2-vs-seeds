@@ -61,6 +61,7 @@ export class ChartsComponent implements OnInit {
             .sort((a, b) => b.value - a.value);
 
           bubble(root);
+
           var node = svg.selectAll(".node")
             .data(root.children)
             .enter().append("g")

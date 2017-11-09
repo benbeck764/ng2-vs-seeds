@@ -27,21 +27,24 @@ namespace PeriGen.POC.SignalR.Controllers
         [HttpGet]
         public async Task<IHttpActionResult> GetLastTenSecondsOfMatches()
         {
-            for (var i = 0; i < 10; i++)
-            {
-                var matches = await ApiCaller.GetLastTenSecondsOfMatches();
-                foreach (var match in matches)
-                {
-                    _context.Clients.Group(Channel).OnEvent("TestChannel", new ChannelEvent
-                    {
-                        ChannelName = "TestChannel",
-                        Name = "Dota2MatchDetails",
-                        Data = match
-                    });
-                }
+            var matches = await ApiCaller.GetMatches();
+            //foreach (var match in matches)
+            //{
+            //    _context.Clients.Group(Channel).OnEvent("TestChannel", new ChannelEvent
+            //    {
+            //        ChannelName = "TestChannel",
+            //        Name = "Dota2MatchDetails",
+            //        Data = match
+            //    });
+            //}
 
-                Thread.Sleep(1000);
-            }
+            // TODO -- Batch these or send individually via socket!?
+            _context.Clients.Group(Channel).OnEvent("TestChannel", new ChannelEvent
+            {
+                ChannelName = "TestChannel",
+                Name = "Dota2MatchDetails",
+                Data = matches
+            });
 
             return Ok();
         }

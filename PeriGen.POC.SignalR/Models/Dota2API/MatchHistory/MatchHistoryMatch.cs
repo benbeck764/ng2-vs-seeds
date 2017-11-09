@@ -5,15 +5,15 @@ namespace PeriGen.POC.SignalR.Models.Dota2API.MatchHistory
 {
     public class MatchHistoryMatch
     {
-        [JsonProperty("matchId")]
+        [JsonProperty("match_id")]
         public long MatchId { get; set; }
-        [JsonProperty("matchSeqNum")]
+        [JsonProperty("match_seq_num")]
         public long MatchSeqNum { get; set; }
-        [JsonProperty("lobbyType")]
+        [JsonProperty("lobby_type")]
         public int LobbyType { get; set; }
-        [JsonProperty("radiantTeamId")]
+        [JsonProperty("radiant_team_id")]
         public int RadiantTeamId { get; set; }
-        [JsonProperty("direTeamId")]
+        [JsonProperty("dire_team_id")]
         public int DireTeamId { get; set; }
         [JsonProperty("players")]
         public List<MatchHistoryPlayer> Players { get; set; }

@@ -48,6 +48,15 @@ export class DemoComponent implements OnInit {
     );
   }
 
+  handleEvent(event: ChannelEvent) {
+    let date = new Date();
+    if (event && event.Data && event.Data !== "") {
+      //console.log(JSON.stringify(event.Data.toString()));
+      this.jsonMatches = `${date.toLocaleTimeString()} : ${JSON.stringify(event.Data)}\n` + this.jsonMatches;
+      this.updateD3Svg(JSON.parse(event.Json));
+    }
+  }
+
   ngOnInit() {
     // Init D3 Svg
     this.initD3Svg();
@@ -66,20 +75,8 @@ export class DemoComponent implements OnInit {
       }
     );
 
-    this._matchesService.getLatestMatches()
-      .subscribe((matches: Match[]) => { matches.forEach(match => {
-        //console.log(match);
-      });
-    });
-  }
-
-  handleEvent(event: ChannelEvent) {
-    let date = new Date();
-    if (event && event.Data && event.Data !== "") {
-      //console.log(JSON.stringify(event.Data.toString()));
-      this.jsonMatches = `${date.toLocaleTimeString()} : ${JSON.stringify(event.Data)}\n` + this.jsonMatches;
-      this.updateD3Svg(JSON.parse(event.Json));
-    }   
+    // Call API to trigger SignalR to send Match data via _channelService SignalR 
+    this._matchesService.getLatestMatches().subscribe();
   }
 
   initD3Svg() {
@@ -87,53 +84,48 @@ export class DemoComponent implements OnInit {
 
       var diameter = 960;
       this.center = { x: diameter / 2, y: diameter / 2 };
-      var format = d3.format(",d");
-      var color = d3.scaleOrdinal(d3.schemeCategory20c);
-
-      var bubble = d3.pack()
-        .size([diameter, diameter])
-        .padding(1.5);
-
-      // Here we create a force layout and
-      // @v4 We create a force simulation now and
-      //  add forces to it.
-      this.simulation = d3.forceSimulation()
-        .velocityDecay(0.2)
-        .force('x', d3.forceX().strength(this.forceStrength).x(this.center.x))
-        .force('y', d3.forceY().strength(this.forceStrength).y(this.center.y))
-        .force('charge', d3.forceManyBody().strength(this.charge).bind(this.forceStrength))
-        .on('tick', this.ticked);
-
-      // @v4 Force starts up automatically,
-      //  which we don't want as there aren't any nodes yet.
-      this.simulation.stop();
 
       this.svg = d3.select("#heroes-chart").append("svg")
         .attr("width", diameter)
         .attr("height", diameter)
         .attr("class", "bubble");
+
+      var charge = d => -Math.pow(d.radius, 2.0) * 0.03;
+
+      this.simulation = d3.forceSimulation(/*this.nodes*/)
+        .velocityDecay(0.2)
+        .force('charge', d3.forceManyBody().strength(charge))
+        .force('x', d3.forceX().strength(this.forceStrength).x(this.center.x))
+        .force('y', d3.forceY().strength(this.forceStrength).y(this.center.y))
+        .alphaTarget(1)
+        //.force("center", d3.forceCenter())
+        .on('tick', this.ticked);
+
+      this.bubbles = this.svg.selectAll('.bubble')
+        .data(this.nodes, d => d.id);
     }
   }
 
-  updateD3Svg(match: Match) {
+  updateD3Svg(matches: Match[]) {
     // Update current counts of each hero
-    match.players.forEach(player => {
-      if (!this.heroCounts.has(player.heroId)) {
-        this.heroCounts.set(player.heroId, 1);
-      } else {
-        var currentCount = this.heroCounts.get(player.heroId);
-        currentCount++;
-        this.heroCounts.set(player.heroId, currentCount);
-      }
+    matches.forEach(match => {
+      match.players.forEach(player => {
+        if (!this.heroCounts.has(player.hero_id)) {
+          this.heroCounts.set(player.hero_id, 1);
+        } else {
+          var currentCount = this.heroCounts.get(player.hero_id);
+          currentCount++;
+          this.heroCounts.set(player.hero_id, currentCount);
+        }
+      });
     });
 
     // Update the SVG itself (push new nodes)
-    this.updateNodes(match);
+    this.updateNodes();
   }
 
-  updateNodes(match: Match) {
+  updateNodes() {
 
-    this.nodes = [];
     var updatedList = [];
     var maxAmount = this.getMaxHeroCount();
 
@@ -144,6 +136,7 @@ export class DemoComponent implements OnInit {
       .range([2, 85])
       .domain([0, maxAmount]);
 
+    // Create updated nodes and push to updatedList
     let keys = Array.from(this.heroCounts.keys());
     keys.forEach(key => {
       var heroCount = this.heroCounts.get(key);
@@ -158,38 +151,27 @@ export class DemoComponent implements OnInit {
       });
     });
 
+    // Set nodes from updatedList
+    updatedList.sort((a, b) => b.value - a.value);
     this.nodes = updatedList;
 
     if (this.nodes.length > 0) {
+      // Apply the general update pattern to the nodes.
+      this.bubbles = this.bubbles.data(this.nodes, d => d.id);
+      this.bubbles.exit().remove();
+      this.bubbles = this.bubbles.enter().append("circle")
+        .attr("fill", d => 'red')
+        .attr("r", 0).merge(this.bubbles)
+        .attr("transform",
+          d => "translate(" + d.x + "," + d.y + ")");
 
-      // Bind nodes data to what will become DOM elements to represent them.
-      this.bubbles = this.svg.selectAll('.bubble')
-        .data(this.nodes, function (d) { return d.id; });
-
-      // Create new circle elements each with class `bubble`.
-      // There will be one circle.bubble for each object in the nodes array.
-      // Initially, their radius (r attribute) will be 0.
-      // @v4 Selections are immutable, so lets capture the
-      //  enter selection to apply our transtition to below.
-      var bubblesE = this.bubbles.enter().append('circle')
-        .classed('bubble', true)
-        .attr('r', 0)
-        .attr('fill', d => { return this.fillColor(d.group); })
-        .attr('stroke', d => { return d3.rgb(this.fillColor(d.group)).darker(); })
-        .attr('stroke-width', 2)
-        .on('mouseover', this.showDetail)
-        .on('mouseout', this.hideDetail);
-
-      // @v4 Merge the original empty selection and the enter selection
-      this.bubbles = this.bubbles.merge(bubblesE);
-
-      // Fancy transition to make bubbles appear, ending with the correct radius
       this.bubbles.transition()
         .duration(2000)
-        .attr('r', function (d) { return d.radius; });
+        .attr('r', d => d.radius);
 
+      // Update and restart the simulation.
       this.simulation.nodes(this.nodes);
-      //this.groupBubbles();
+      this.groupBubbles();
     }
   };
 
@@ -197,45 +179,11 @@ export class DemoComponent implements OnInit {
     return -Math.pow(d.radius, 2.0) * this.forceStrength;
   };
 
-  //createNodes(rawData) {
-
-  //  var maxAmount = this.getMaxHeroCount();
-
-  //  // Sizes bubbles based on area.
-  //  // @v4: new flattened scale names.
-  //  var radiusScale = d3.scalePow()
-  //    .exponent(0.5)
-  //    .range([2, 85])
-  //    .domain([0, maxAmount]);
-
-  //  // Use map() to convert raw data into node data.
-  //  // Checkout http://learnjsdata.com/ for more on
-  //  // working with data.
-  //  var myNodes = rawData.map(function (d) {
-  //    var heroId = d.heroId;
-  //    var heroCount = this.heroCounts.get(heroId);
-  //    return {
-  //      id: heroId,
-  //      radius: radiusScale(+heroCount),
-  //      count: +heroCount,
-  //      //name: d.grant_title, //TODO -- Grab Hero Name
-  //      heroId: heroId,
-  //      x: Math.random() * 900,
-  //      y: Math.random() * 800
-  //    };
-  //  });
-
-  //  // sort them to prevent occlusion of smaller nodes.
-  //  myNodes.sort(function (a, b) { return b.value - a.value; });
-
-  //  return myNodes;
-  //}
-
   showDetail(d) {
     // change outline to indicate hover state.
     d3.select(this).attr('stroke', 'black');
 
-    var content = 'Hello I am some content';
+    var content = 'Hello I am some content';  
 
     // TODO
     //this.tooltip.showTooltip(content, d3.event);
@@ -243,19 +191,18 @@ export class DemoComponent implements OnInit {
 
   hideDetail(d) {
     // reset outline
-    d3.select(this)
-      .attr('stroke', d3.rgb(this.fillColor(d.group)).darker());
+    d3.select(this).attr('stroke', d3.rgb(this.fillColor(d.group)).darker());
 
     // TODO
     //this.tooltip.hideTooltip();
   }
 
   ticked() {
-    //if (this.nodes.length > 0) {
-    //  this.bubbles
-    //    .attr('cx', function (d) { return d.x; })
-    //    .attr('cy', function (d) { return d.y; });
-    //}  
+   if (this.bubbles != null) {
+     this.bubbles
+       .attr('cx', d => d.x)
+       .attr('cy', d => d.y);
+   }
   }
 
   getMaxHeroCount() {
@@ -267,11 +214,15 @@ export class DemoComponent implements OnInit {
 
   groupBubbles() {
     if (this.nodes.length > 0 && this.bubbles != null) {
+
       // @v4 Reset the 'x' force to draw the bubbles to the center.
       this.simulation.force('x', d3.forceX().strength(this.forceStrength).x(this.center.x));
+      //this.simulation.nodes(this.nodes).on('tick', this.ticked);
+      //this.simulation.force('center', d3.forceCenter(this.center.x, this.center.y));
 
       // @v4 We can reset the alpha value and restart the simulation
       this.simulation.alpha(1).restart();
     }
   }
 }
+
