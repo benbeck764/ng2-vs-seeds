@@ -1,0 +1,109 @@
+$purple: #962594;
+$blue: #00aeef;
+$green: #00a651;
+$red: #9d1313;
+$container-width: 135px;
+$img-width: 35px;
+
+.line {
+  fill: none !important;
+  stroke-width: 1.5px !important;
+}
+
+.purple-line {
+  stroke: $purple;
+}
+
+.blue-line {
+  stroke: $blue;
+}
+
+.green-line {
+  stroke: $green;
+}
+
+.red-line {
+  stroke: $red;
+}
+
+.grid line {
+  stroke: #eeeeee;
+  stroke-width: 1.0px;
+  stroke-opacity: 0.8;
+  shape-rendering: crispEdges;
+}
+
+.grid-thick line {
+  stroke: #d8d8d8;
+  stroke-width: 1.5px;
+  stroke-opacity: 1;
+  shape-rendering: crispEdges;
+}
+
+.grid path, .grid-thick path {
+  stroke-width: 0;
+}
+
+.svg-container {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%; /* aspect ratio */
+  vertical-align: top;
+  overflow: hidden;
+}
+
+.svg-content-responsive {
+  display: inline-block;
+  position: absolute;
+  top: 10px;
+  left: 0;
+}
+
+.img-baby {
+  height: 32.5px;
+  width: $img-width;
+}
+
+.baby-container {
+  width: $container-width;
+  height: 35px;
+  margin-right: 20px;
+
+  &.purple {
+    border: 2px solid $purple;
+    color: $purple;
+  }
+
+  &.blue {
+    border: 2px solid $blue;
+    color: $blue;
+  }
+
+  &.green {
+    border: 2px solid $green;
+    color: $green;
+  }
+
+  &.red {
+    border: 2px solid $red;
+    color: $red;
+  }
+}
+
+.span-bpm {
+  width: $container-width - $img-width;
+
+  span:first-of-type {
+    margin-left: 10px;
+    font-weight: bold;
+    margin-right: 5px;
+    font-size: 16px;
+  }
+
+  span:last-of-type {
+    font-weight: bold;
+    vertical-align: sub;
+    font-size: 14px;
+  }
+}

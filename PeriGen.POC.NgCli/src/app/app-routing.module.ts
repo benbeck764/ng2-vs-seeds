@@ -4,6 +4,7 @@ import { DashboardComponent } from "./components/dashboard/dashboard.component";
 import { ChartsComponent } from "./components/charts/charts.component";
 import { RealtimeComponent } from "./components/realtime/realtime.component";
 import { DemoComponent } from "./components/demo/demo.component";
+import { HeartrateComponent } from "./components/heartrate/heartrate.component";
 
 const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -11,6 +12,7 @@ const routes: Routes = [
   { path: 'charts', component: ChartsComponent },
   { path: 'realtime', component: RealtimeComponent },
   { path: 'demo', component: DemoComponent },
+  { path: 'heartrate', component: HeartrateComponent },
   { path: '**', redirectTo: 'dashboard' }
 ];
 

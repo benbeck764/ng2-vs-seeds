@@ -1,14 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.AspNet.SignalR;
 using Newtonsoft.Json;
+using PeriGen.POC.SignalR.Hub;
 using PeriGen.POC.SignalR.Models.Dota2API.MatchHistory;
 
 namespace PeriGen.POC.SignalR.DotaApi
 {
     public static class ApiCaller
     {
+        private static readonly IHubContext Context;
+        private const string Channel = "TestChannel";
+
+        static ApiCaller()
+        {
+            Context = GlobalHost.ConnectionManager.GetHubContext<EventHub>();
+        }
+
         public static string DevKey { get; } = "F99837D4DF07828F1C85C71700B0F9BD";
         public static string AccountId { get; } = "111871881";
         public static int NumHeroes { get; } = 112;
@@ -23,21 +34,27 @@ namespace PeriGen.POC.SignalR.DotaApi
         public static string HeroImagesUri { get; } = "http://cdn.dota2.com/apps/dota2/images/heroes/";
         public static string ItemImagesUri { get; } = "http://cdn.dota2.com/apps/dota2/images/items/";
 
-        public static async Task<List<MatchHistoryMatch>> GetMatches()
+        public static async Task GetMatches()
         {
-            var utcNow = DateTimeOffset.UtcNow;
-            var utcOneDayAgo = DateTimeOffset.UtcNow.AddDays(-1);
-            var start = utcOneDayAgo.ToUnixTimeMilliseconds();
-            var end = utcNow.ToUnixTimeMilliseconds();
-
-            var apiUrlMatchHistory = MatchHistoryUri + $"?key={DevKey}" + $"&format={Format}" + $"&date_min={start}" + $"&date_max={end}";
-            var requestMatchHistory = HttpManager.InitHttpRequest(HttpMethod.Get, null, apiUrlMatchHistory);
+            //var apiUrlMatchHistory = MatchHistoryUri + $"?key={DevKey}" + $"&format={Format}" + $"&account_id={AccountId}" + $"&matches_requested={100}" + $"start_at_match_id={matchId}";
+            var apiUrlBensApi = "http://ben-test-api.azurewebsites.net/api/matches";
+            var requestMatchHistory = HttpManager.InitHttpRequest(HttpMethod.Get, null, apiUrlBensApi);
             var responseMatchHistory = await HttpManager.SendRequest(requestMatchHistory);
             var jsonResultMatchHistory = await HttpManager.GetResult(responseMatchHistory);
 
-            var matchHistoryResponse = JsonConvert.DeserializeObject<MatchHistoryResponse>(jsonResultMatchHistory);
+            var matches = JsonConvert.DeserializeObject<List<MatchHistoryMatch>>(jsonResultMatchHistory).OrderBy(m => m.MatchId).ToList();
 
-            return matchHistoryResponse.Result.Matches;
+            for (var i = 0; i < matches.Count; i = i + 50)
+            {
+                var takenMatches = matches.Skip(i).Take(50);
+                Context.Clients.Group(Channel).OnEvent("TestChannel", new ChannelEvent
+                {
+                    ChannelName = "TestChannel",
+                    Name = "Dota2MatchDetails",
+                    Data = takenMatches
+                });
+                System.Threading.Thread.Sleep(3000);
+            }
         }
     }
 }

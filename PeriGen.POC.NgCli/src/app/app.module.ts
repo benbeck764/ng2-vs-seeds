@@ -17,6 +17,7 @@ import { DemoComponent } from './components/demo/demo.component';
 
 import { ChannelService, ChannelConfig, SignalrWindow} from './services/channel.service';
 import { MatchesService } from './services/matches.service';
+import { HeartrateComponent } from './components/heartrate/heartrate.component';
 
 let channelConfig = new ChannelConfig();
 channelConfig.url = "http://localhost:56682/signalr";
@@ -30,7 +31,8 @@ channelConfig.hubName = "EventHub";
     ChartsComponent,
     RealtimeComponent,
     TaskComponent,
-    DemoComponent
+    DemoComponent,
+    HeartrateComponent
   ],
   imports: [
     BrowserModule,
