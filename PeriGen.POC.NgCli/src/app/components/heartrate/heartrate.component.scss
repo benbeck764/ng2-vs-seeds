@@ -2,6 +2,9 @@ $purple: #962594;
 $blue: #00aeef;
 $green: #00a651;
 $red: #9d1313;
+$minorGridLineColor: #eeeeee;
+$majorGridLineColor: #d8d8d8;
+$gridTextColor: #acacac;
 $container-width: 135px;
 $img-width: 35px;
 
@@ -27,15 +30,15 @@ $img-width: 35px;
 }
 
 .grid line {
-  stroke: #eeeeee;
-  stroke-width: 1.0px;
+  stroke: $minorGridLineColor;
+  stroke-width: 1.5px;
   stroke-opacity: 0.8;
   shape-rendering: crispEdges;
 }
 
 .grid-thick line {
-  stroke: #d8d8d8;
-  stroke-width: 1.5px;
+  stroke: $majorGridLineColor;
+  stroke-width: 2px;
   stroke-opacity: 1;
   shape-rendering: crispEdges;
 }
@@ -105,5 +108,29 @@ $img-width: 35px;
     font-weight: bold;
     vertical-align: sub;
     font-size: 14px;
+  }
+}
+
+.axis--y {
+  text {
+    stroke: $gridTextColor;
+    stroke-width: 0.50px;
+  }
+
+  path {
+    stroke: $majorGridLineColor;
+  }
+}
+
+.axis--x {
+  text {
+    stroke: $gridTextColor;
+    stroke-width: 0.55px;
+    transform: translateY(10px);
+    font-size: 12px;
+  }
+
+  path {
+    stroke: $majorGridLineColor;
   }
 }
