@@ -2,6 +2,7 @@ $purple: #962594;
 $blue: #00aeef;
 $green: #00a651;
 $red: #9d1313;
+$grey: #a1a1a1;
 $minorGridLineColor: #eeeeee;
 $majorGridLineColor: #d8d8d8;
 $gridTextColor: #acacac;
@@ -29,6 +30,10 @@ $img-width: 35px;
   stroke: $red;
 }
 
+.grey-line {
+  stroke: $grey;
+}
+
 .grid line {
   stroke: $minorGridLineColor;
   stroke-width: 1.5px;
@@ -47,11 +52,19 @@ $img-width: 35px;
   stroke-width: 0;
 }
 
+#heartrate-chart {
+  height: 300px;
+}
+
+uterine-activity-chart {
+  height: 150px;
+}
+
 .svg-container {
   display: inline-block;
   position: relative;
   width: 100%;
-  padding-bottom: 100%; /* aspect ratio */
+  padding-bottom: 100%; /* aspect ratio */ 
   vertical-align: top;
   overflow: hidden;
 }
@@ -59,7 +72,7 @@ $img-width: 35px;
 .svg-content-responsive {
   display: inline-block;
   position: absolute;
-  top: 10px;
+  /*top: 10px;*/
   left: 0;
 }
 
