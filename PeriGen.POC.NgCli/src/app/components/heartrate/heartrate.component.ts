@@ -20,12 +20,13 @@ export class HeartrateComponent implements OnInit {
   private lineCount = 4;
   private ticksPerSecond = 4;
   private colors = ["purple", "blue", "green", "red"];
-  private dateTimeNow = moment().startOf('minute');
-  private dateTimeFifteenMins = moment().startOf('minute').add(15, 'minutes');
+  private dateTimeNow = moment().startOf('minute').subtract(15, 'minutes');
+  private dateTimeFifteenMins = this.dateTimeNow.clone().add(15, 'minutes');
   private defaultDataValue = -1;
 
   private yMin = 30;
   private yMax = 240;
+  private hbSvg;
   private uaSvg;
   private svgWidth = 1650;
   private svgWidthUa = 1650;
@@ -42,8 +43,6 @@ export class HeartrateComponent implements OnInit {
   private yUa = d3.scaleLinear().domain([0, 100]).range([this.heightUa, 0]);
   private g;
   private gUa;
-
-  private matrix = Array.apply(null, { length: this.count }).map(Number.call, Number);
 
   private line = d3.line()
     .curve(d3.curveBasis)
@@ -93,20 +92,14 @@ export class HeartrateComponent implements OnInit {
 
     // Initialize Data Array w/ Default Values (-1)
     this.data = new Array(this.lineCount);
-    for (var j = 0; j < this.lineCount; j++) {
-      this.data[j] = new Array(this.count);
-      for (var i = 0; i < this.count; i++) {
-        this.data[j][i] = d3.range(this.n).map(d => this.defaultDataValue);
-      }
+    for (var i = 0; i < this.lineCount; i++) {
+      this.data[i] = d3.range(this.n).map(d => this.defaultDataValue);
     }
-
-    // Initialize Matrix
-    this.matrix = Array.apply(null, { length: this.count }).map(Number.call, Number);
-
+    
     // Create SVG and Bind Data 
     d3.selectAll("svg").data([]).exit().remove();
 
-    var svg = d3.select("#heartrate-chart")
+    this.hbSvg = d3.select("#heartrate-chart")
       .append("div")
       .classed("svg-container", true) //container class to make it responsive
       .append("svg")
@@ -114,7 +107,7 @@ export class HeartrateComponent implements OnInit {
       .attr("height", this.svgHeight);
 
     d3.selectAll("svg")
-      .data(this.matrix)
+      .data(this.data)
       .enter();
 
     d3.selectAll("svg")
@@ -129,7 +122,7 @@ export class HeartrateComponent implements OnInit {
       .attr('preserveAspectRatio', 'xMinYMin meet')
       .classed("svg-content-responsive", true);
 
-    this.g = svg.append("g")
+    this.g = this.hbSvg.append("g")
       .attr("width", "100%")
       .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
@@ -360,25 +353,23 @@ export class HeartrateComponent implements OnInit {
     this.initHeartBeatGraph();
     this.initUterineActivityGraph();
 
-    for (var j = 0; j < this.lineCount; j++) {
-      for (var i = 0; i < this.count; i++) {
-        var myg = d3.selectAll("svg").filter("[data-idx='" + i + "']").select("g");
-        var myData = this.data[j][i];
-        var it = myg.append("g")
-          .attr("clip-path", "url(#clip)")
-          .append("path")
-          .datum(myData)
-          .attr("class", "line " + this.colors[j] + "-line")
-          .attr("data-color-idx", j)
-          .transition()
-          .duration(1000 / this.ticksPerSecond)
-          .ease(d => d3.easeLinear(d))
-          .on("start", function() {
-            var d3Element = this;
-            that.tick(that, d3Element);
-          });
-        this.hold.push(it); // save so I can remove handler later
-      }
+    for (var i = 0; i < this.lineCount; i++) {
+      var myg = this.hbSvg.select("g");
+      var myData = this.data[i];
+      var it = myg.append("g")
+        .attr("clip-path", "url(#clip)")
+        .append("path")
+        .datum(myData)
+        .attr("class", "line " + this.colors[i] + "-line")
+        .attr("data-color-idx", i)
+        .transition()
+        .duration(1000 / this.ticksPerSecond)
+        .ease(d => d3.easeLinear(d))
+        .on("start", function() {
+          var d3Element = this;
+          that.tick(that, d3Element);
+        });
+      this.hold.push(it); // save so I can remove handler later
     }
 
     var myData = this.dataUa;
@@ -430,11 +421,9 @@ export class HeartrateComponent implements OnInit {
     }
 
     var selectedg = d3.select(d3Element);
-    var idk = selectedg._groups[0][0];
-    var idx = parseInt(d3.select(idk.parentNode).node().parentNode.parentNode.getAttribute("data-idx"));
     var colorIdx = parseInt(selectedg.attr("data-color-idx"));
 
-    var myData = that.data[colorIdx][idx];
+    var myData = that.data[colorIdx];
     if (myData === undefined) return;
 
     var newData = that.random();
@@ -449,9 +438,9 @@ export class HeartrateComponent implements OnInit {
         that.tick(that, d3Element);
     });
 
-    if (!myData.includes(that.defaultDataValue)) {
+    //if (!myData.includes(that.defaultDataValue)) {
         that.updateTimeScale(colorIdx);
-    }
+    //}
    
     myData.shift();
   }
