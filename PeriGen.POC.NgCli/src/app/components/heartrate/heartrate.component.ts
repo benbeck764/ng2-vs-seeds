@@ -18,7 +18,8 @@ export class HeartrateComponent implements OnInit {
   private n = 15;
   private count = 1;
   private lineCount = 4;
-  private ticksPerSecond = 4;
+  private ticksPerSecondHb = 4;
+  private ticksPerSecondUa = 1;
   private colors = ["purple", "blue", "green", "red"];
   private dateTimeNow = moment().startOf('minute').subtract(15, 'minutes');
   private dateTimeFifteenMins = this.dateTimeNow.clone().add(15, 'minutes');
@@ -48,7 +49,7 @@ export class HeartrateComponent implements OnInit {
     .curve(d3.curveBasis)
     .x((d, i) => {
       var startingTime = this.dateTimeNow.clone();
-      var time = startingTime.add(i, 'minutes').toDate();
+      var time = startingTime.add(i * 250, 'milliseconds').toDate();
       return this.x(time);
     })
     .y((d, i) => this.y(d)
@@ -58,7 +59,7 @@ export class HeartrateComponent implements OnInit {
     .curve(d3.curveBasis)
     .x((d, i) => {
       var startingTime = this.dateTimeNow.clone();
-      var time = startingTime.add(i, 'minutes').toDate();
+      var time = startingTime.add(i, 'seconds').toDate();
       return this.xUa(time);
     })
     .y((d, i) => this.yUa(d)
@@ -93,7 +94,7 @@ export class HeartrateComponent implements OnInit {
     // Initialize Data Array w/ Default Values (-1)
     this.data = new Array(this.lineCount);
     for (var i = 0; i < this.lineCount; i++) {
-      this.data[i] = d3.range(this.n).map(d => this.defaultDataValue);
+      this.data[i] = d3.range(this.n * this.ticksPerSecondHb * 60).map(d => this.defaultDataValue);
     }
     
     // Create SVG and Bind Data 
@@ -137,7 +138,7 @@ export class HeartrateComponent implements OnInit {
       .curve(d3.curveBasis)
       .x((d, i) => {
         var startingTime = this.dateTimeNow.clone();
-        var time = startingTime.add(i, 'minutes').toDate();
+        var time = startingTime.add(i * 250, 'milliseconds').toDate();
         return this.x(time);
       })
       .y((d, i) => this.y(d)
@@ -186,6 +187,7 @@ export class HeartrateComponent implements OnInit {
     // Add X-Axis Major Gridlines - Vertical
     this.g.append("g")
       .attr("class", "grid-thick")
+      .attr("class", "hb-major-x")
       .attr("transform", "translate(0," + this.height + ")")
       .call(d3.axisBottom(this.x)
         .ticks(d3.timeMinute.every(1))
@@ -216,7 +218,7 @@ export class HeartrateComponent implements OnInit {
 
     // Initialize Data Array w/ Default Values (-1)
     this.dataUa = new Array(this.n);
-    for (var i = 0; i < this.n; i++) {
+    for (var i = 0; i < (this.n * this.ticksPerSecondUa * 60); i++) {
       this.dataUa[i] = this.defaultDataValue;
     }
 
@@ -254,7 +256,7 @@ export class HeartrateComponent implements OnInit {
       .curve(d3.curveBasis)
       .x((d, i) => {
         var startingTime = this.dateTimeNow.clone();
-        var time = startingTime.add(i, 'minutes').toDate();
+        var time = startingTime.add(i, 'seconds').toDate();
         return this.xUa(time);
       })
       .y((d, i) => this.yUa(d)
@@ -315,6 +317,7 @@ export class HeartrateComponent implements OnInit {
   }
 
   drawXAxes() {
+
     // Add X-Axis (Interval Ticks)
     this.g.append("g")
       .attr("class", "axis axis--x")
@@ -327,7 +330,7 @@ export class HeartrateComponent implements OnInit {
           this.dateTimeNow.clone().add(12, 'minutes').toDate(),
           this.dateTimeFifteenMins.toDate()
         ])
-        .tickFormat(d3.timeFormat("%I:%M"))
+        .tickFormat(d3.timeFormat("%I:%M %L"))
         .tickSize(0, 1, 0)
     );
 
@@ -359,111 +362,79 @@ export class HeartrateComponent implements OnInit {
       var it = myg.append("g")
         .attr("clip-path", "url(#clip)")
         .append("path")
-        .datum(myData)
-        .attr("class", "line " + this.colors[i] + "-line")
-        .attr("data-color-idx", i)
+          .datum(myData)
+          .attr("class", "line " + this.colors[i] + "-line")
+          .attr("data-color-idx", i)
         .transition()
-        .duration(1000 / this.ticksPerSecond)
-        .ease(d => d3.easeLinear(d))
-        .on("start", function() {
-          var d3Element = this;
-          that.tick(that, d3Element);
-        });
-      this.hold.push(it); // save so I can remove handler later
+        .duration(1000 / this.ticksPerSecondHb)
+          .ease(d => d3.easeLinear(d))
+          .on("start", (dataArray, index, d3Element) => {
+            this.tick(d3Element[0]);
+          });
+      this.hold.push(it); // save so I can remove handler later //TODO?
     }
 
     var myData = this.dataUa;
     var it = this.gUa.append("g")
       .attr("clip-path", "url(#ua-clip)")
       .append("path")
-      .datum(myData)
-      .attr("class", "line grey-line")
+        .datum(myData)
+        .attr("class", "line grey-line")
       .transition()
-      .duration(1000 / this.ticksPerSecond)
-      .ease(d => d3.easeLinear(d))
-      .on("start", function () {
-        var d3Element = this;
-        that.tickUa(that, d3Element);
+        .duration(1000 / this.ticksPerSecondUa)
+        .ease(d => d3.easeLinear(d))
+      .on("start", (dataArray, index, d3Element) => {
+          this.tickUa(d3Element[0]);
       });
   }
 
-  tickUa(that, d3Element) {
-    console.log("tick-ua");
+  tick(d3Element) {
 
+    //console.log("tick");
     var selectedActive = d3.active(d3Element);
-    if (selectedActive == null) {
-      console.log("not active");
-      return;
-    }
-
-    var selectedg = d3.select(d3Element);
-    var myData = that.dataUa;
-    var newData = that.randomUa();
-    myData.push(newData);
-
-    selectedg.attr("d", that.lineUa).attr("transform", null);
-    selectedActive.attr("transform", "translate(" + that.x(that.dateTimeNow.toDate()) + ",0)")
-      .transition().on("start", function () {
-        var d3Element = this;
-        that.tickUa(that, d3Element);
-    });
-
-    myData.shift();
-  }
-
-  tick(that, d3Element) {
-
-    console.log("tick");
-    var selectedActive = d3.active(d3Element);
-    if (selectedActive == null) {
-      console.log("not active");
-      return;
-    }
+    if (selectedActive == null) { return; }
 
     var selectedg = d3.select(d3Element);
     var colorIdx = parseInt(selectedg.attr("data-color-idx"));
 
-    var myData = that.data[colorIdx];
+    var myData = this.data[colorIdx];
     if (myData === undefined) return;
 
-    var newData = that.random();
+    var newData = this.random();
     myData.push(newData);
 
-    that.updateBpm(newData, colorIdx);
+    this.updateBpm(newData, colorIdx);
 
-    selectedg.attr("d", that.line).attr("transform", null);
-    selectedActive.attr("transform", "translate(" + that.x(that.dateTimeNow.toDate()) + ",0)")
-      .transition().on("start", function() {
-        var d3Element = this;
-        that.tick(that, d3Element);
+    selectedg.attr("d", this.line).attr("transform", null);
+    selectedActive.attr("transform", "translate(" + this.x(this.dateTimeNow.toDate()) + ",0)")
+      .transition().on("start", (dataArray, index, d3Element) => {
+        this.tick(d3Element[0]);
     });
 
-    //if (!myData.includes(that.defaultDataValue)) {
-        that.updateTimeScale(colorIdx);
-    //}
-   
+    this.updateTimeScale(colorIdx);
+    
     myData.shift();
   }
 
-  updateBpm(dataPoint, colorIndex) {
-    switch (colorIndex) {
-      case 0:
-        this.baby1bpm = Math.round(dataPoint);
-        break;
-      case 1:
-        this.baby2bpm = Math.round(dataPoint);
-        break;
-      case 2:
-        this.baby3bpm = Math.round(dataPoint);
-        break;
-      case 3:
-        this.baby4bpm = Math.round(dataPoint);
-        break;
-      default:
-        break;
-      }
-  }
+  tickUa(d3Element) {
+    //console.log("tick-ua");
 
+    var selectedActive = d3.active(d3Element);
+    if (selectedActive == null) { return; }
+
+    var selectedg = d3.select(d3Element);
+    var myData = this.dataUa;
+    var newData = this.randomUa();
+    myData.push(newData);
+
+    selectedg.attr("d", this.lineUa).attr("transform", null);
+    selectedActive.attr("transform", "translate(" + this.xUa(this.dateTimeNow.toDate()) + ",0)")
+      .transition().on("start", (dataArray, index, d3Element) => {
+        this.tickUa(d3Element[0]);
+      });
+
+    myData.shift();
+  }
 
   updateTimeScale(colorIndex) {
 
@@ -491,8 +462,10 @@ export class HeartrateComponent implements OnInit {
       this.baby3ticked = false;
       this.baby4ticked = false;
 
-      this.dateTimeNow.add(1, 'minutes');
-      this.dateTimeFifteenMins = this.dateTimeNow.clone().startOf('minute').add(15, 'minutes');
+      //this.dateTimeNow.add(1, 'minutes');
+      //this.dateTimeNow.add(15, 'seconds');
+      this.dateTimeNow.add(250, 'milliseconds');
+      this.dateTimeFifteenMins = this.dateTimeNow.clone().add(15, 'minutes');
       this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeFifteenMins.toDate()]).range([0, this.width]);
       this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeFifteenMins.toDate()]).range([0, this.width]);
       this.redrawTimeScale();
@@ -501,8 +474,38 @@ export class HeartrateComponent implements OnInit {
 
   redrawTimeScale() {
     this.g.selectAll(".axis--x").data([]).exit().remove();
+    //this.g.selectAll(".hb-major-x").data([]).exit().remove();
 
     // Re-Draw X Axes
     this.drawXAxes();
+
+    //this.g.append("g")
+    //  .attr("class", "grid-thick")
+    //  .attr("class", "hb-major-x")
+    //  .attr("transform", "translate(0," + this.height + ")")
+    //  .call(d3.axisBottom(this.x)
+    //    .ticks(d3.timeMinute.every(1))
+    //    .tickSize(-(this.height), 1, 1)
+    //    .tickFormat("")
+    //  );
+  }
+
+  updateBpm(dataPoint, colorIndex) {
+    switch (colorIndex) {
+      case 0:
+        this.baby1bpm = Math.round(dataPoint);
+        break;
+      case 1:
+        this.baby2bpm = Math.round(dataPoint);
+        break;
+      case 2:
+        this.baby3bpm = Math.round(dataPoint);
+        break;
+      case 3:
+        this.baby4bpm = Math.round(dataPoint);
+        break;
+      default:
+        break;
+    }
   }
 }
