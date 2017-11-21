@@ -13,8 +13,19 @@ export class HeartrateComponent implements OnInit {
   private parentNativeElement: any;
   private data;
   private dataUa;
-  private random = d3.randomUniform(110, 190);
+  private randomHb1 = d3.randomNormal(0, 2.5);
+  private randomHb2 = d3.randomNormal(0, 2.5);
+  private randomHb3 = d3.randomNormal(0, 2.5);
+  private randomHb4 = d3.randomNormal(0, 2.5);
+
+  private hb1Start = 124;
+  private hb2Start = 137;
+  private hb3Start = 152;
+  private hb4Start = 171;
+
   private randomUa = d3.randomUniform(25, 95);
+  //private random = d3.randomUniform(110, 190);
+  //private randomUa = d3.randomUniform(25, 95);
   private n = 15;
   private count = 1;
   private lineCount = 4;
@@ -400,7 +411,23 @@ export class HeartrateComponent implements OnInit {
     var myData = this.data[colorIdx];
     if (myData === undefined) return;
 
-    var newData = this.random();
+    var newData = this.defaultDataValue;
+    switch (colorIdx) {
+      case 0:
+        newData = this.randomHb1() + this.hb1Start;
+        break;
+      case 1:
+        newData = this.randomHb2() + this.hb2Start;
+        break;
+      case 2:
+        newData = this.randomHb3() + this.hb3Start;
+        break;
+      case 3:
+        newData = this.randomHb4() + this.hb4Start;
+        break;
+      default:
+        break;
+    }
     myData.push(newData);
 
     this.updateBpm(newData, colorIdx);
