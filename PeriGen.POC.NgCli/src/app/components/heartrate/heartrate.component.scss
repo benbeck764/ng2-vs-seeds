@@ -56,7 +56,7 @@ $img-width: 35px;
   height: 300px;
 }
 
-uterine-activity-chart {
+#uterine-activity-chart {
   height: 150px;
 }
 
@@ -64,7 +64,8 @@ uterine-activity-chart {
   display: inline-block;
   position: relative;
   width: 100%;
-  padding-bottom: 100%; /* aspect ratio */ 
+  height: inherit !important;
+  //padding-bottom: 100%; /* aspect ratio */ 
   vertical-align: top;
   overflow: hidden;
 }
