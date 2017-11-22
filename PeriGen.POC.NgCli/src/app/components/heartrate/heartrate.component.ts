@@ -114,7 +114,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     var myHeight = d3.selectAll("svg").style("height").replace("px", "");
 
     d3.selectAll("svg")
-      .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + this.margin.bottom))
+      .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + 10 /*this.margin.bottom*/)) // TODO Fix Magic Numbers
       .attr('preserveAspectRatio', 'xMinYMin meet')
       .classed("svg-content-responsive", true);
 
@@ -233,7 +233,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     var myHeight = svg.style("height").replace("px", "");
 
     svg
-      .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + 10)) // TODO fix this + 10 magic
+      .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + 5)) // TODO fix this + 5 magic
       .attr('preserveAspectRatio', 'xMinYMin meet')
       .classed("svg-content-responsive", true);
 
