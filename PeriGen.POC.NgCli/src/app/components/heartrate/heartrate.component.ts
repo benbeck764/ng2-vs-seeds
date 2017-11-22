@@ -36,6 +36,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private hb3Start = 157;
   private hb4Start = 172;
   private ticksPerSecondHb = 4;
+  //private ticksPerSecondHb = 1;
 
   // Heartbeat SVG & Chart Configuration
   private yMin = 30;
@@ -55,6 +56,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   // Random Uterine Activity Data Generator
   private randomUa = d3.randomUniform(25, 95);
   private ticksPerSecondUa = 1;
+  //private ticksPerSecondUa = (1/4);
 
   // Uterine Activity SVG & Chart Configuration
   private uaSvg;
@@ -349,6 +351,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
     console.log('Heartrate Component');
     this.n = 15;
+
     // Initialize Component Graphs
     this.initHeartBeatGraph();
     this.initUterineActivityGraph();
@@ -389,9 +392,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   ngOnChanges(changes: { [propKey: string]: SimpleChange }) {
     var newN = changes['n'].currentValue;
     if (typeof(newN) === "undefined") { return; }
-    console.log('ngOnChanges: ' + this.n);
 
-    // TODO -- Call Logic Here To Update TimeScales & Graphs, etc...
     if (!this.firstEmit) { this.toggleInterval(newN); }
     this.firstEmit = false;
   }
@@ -532,77 +533,43 @@ export class HeartrateComponent implements OnInit, OnChanges {
     this.n = newInterval;
 
     if (this.n === 15) {
+
       this.dateTimeNow = this.dateTimeNow.add(15, 'minutes');
       this.dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
       this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
       this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
 
-      this.line = d3.line()
-        .curve(d3.curveBasis)
-        .x((d, i) => {
-          var startingTime = this.dateTimeNow.clone();
-          var time = startingTime.add(i * 250, 'milliseconds').toDate();
-          return this.x(time);
-        })
-        .y((d, i) => this.y(d)
-      );
+      // Remove HeartBeat / UA Paths
+      var clipPathGs = this.g.selectAll("g[clip-path='url(#clip)']");
+      var paths = clipPathGs.selectAll("path").data([]).exit();
 
-      this.lineUa = d3.line()
-        .curve(d3.curveBasis)
-        .x((d, i) => {
-          var startingTime = this.dateTimeNow.clone();
-          var time = startingTime.add(i, 'seconds').toDate();
-          return this.xUa(time);
-        })
-        .y((d, i) => this.yUa(d)
-      );
+      var clipPathGsUa = this.gUa.selectAll("g[clip-path='url(#ua-clip)']");
+      clipPathGsUa.selectAll("path").data([]).exit();
+      clipPathGsUa.selectAll("path").data([this.dataUaFifteenMin]).enter();
+
+      for (var i = 0; i < this.lineCount; i++) {
+        var selectedPath = this.g.select("path[data-color-idx='" + i + "']");
+        selectedPath.data([this.dataFifteenMin[i]]).enter();
+      }
 
     } else if (this.n === 30) {
+
       this.dateTimeNow = this.dateTimeNow.subtract(15, 'minutes');
       this.dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
       this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
       this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
 
-      this.line = d3.line()
-        .curve(d3.curveBasis)
-        .x((d, i) => {
-          var startingTime = this.dateTimeNow.clone();
-          var time = startingTime.add((i * 250) * 2, 'milliseconds').toDate();
-          return this.x(time);
-        })
-        .y((d, i) => this.y(d)
-      );
+      // Remove HeartBeat / UA Paths
+      var clipPathGs = this.g.selectAll("g[clip-path='url(#clip)']");
+      var paths = clipPathGs.selectAll("path").data([]).exit();
 
-      this.lineUa = d3.line()
-        .curve(d3.curveBasis)
-        .x((d, i) => {
-          var startingTime = this.dateTimeNow.clone();
-          var time = startingTime.add((i * 2), 'seconds').toDate();
-          return this.xUa(time);
-        })
-        .y((d, i) => this.yUa(d)
-      );
-
-
-      // TODO -- WTF am I actually trying to do here!?!?
-      var paths = this.g.selectAll("g[clip-path='url(#clip)'] path").data([]).exit().remove();
+      var clipPathGsUa = this.gUa.selectAll("g[clip-path='url(#ua-clip)']");
+      clipPathGsUa.selectAll("path").data([]).exit();
+      clipPathGsUa.selectAll("path").data([this.dataUaThirtyMin]).enter();
 
       for (var i = 0; i < this.lineCount; i++) {
-        var myg = this.hbSvg.select("g");
-        var myData = this.dataThirtyMin[i];
-        var it = myg.append("g")
-          .attr("clip-path", "url(#clip)")
-          .append("path")
-            .data([myData])
-            .enter()
-            .attr("class", "line " + this.colors[i] + "-line")
-            .attr("data-color-idx", i)
-          .transition()
-            .duration(1000 / this.ticksPerSecondHb)
-            .ease(d => d3.easeLinear(d))
-          .on("start", (dataArray, index, d3Element) => {
-            this.tick(d3Element[0]);
-          });
+        var selectedPath = this.g.select("path[data-color-idx='" + i + "']"); 
+        selectedPath.data([this.dataThirtyMin[i]]).enter();
       }
     }
 
