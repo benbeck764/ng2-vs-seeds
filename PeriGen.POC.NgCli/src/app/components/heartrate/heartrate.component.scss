@@ -64,7 +64,7 @@ $img-width: 35px;
   display: inline-block;
   position: relative;
   width: 100%;
-  height: inherit !important;
+  height: inherit;
   //padding-bottom: 100%; /* aspect ratio */ 
   vertical-align: top;
   overflow: hidden;
@@ -79,13 +79,14 @@ $img-width: 35px;
 
 .img-baby {
   height: 32.5px;
-  width: $img-width;
+  /*width: $img-width;*/
+  margin-left: 1px;
 }
 
 .baby-container {
-  width: $container-width;
-  height: 35px;
-  margin-right: 20px;
+  /*width: $container-width;*/
+  height: 37px;
+  margin-right: 15px;
 
   &.purple {
     border: 2px solid $purple;
@@ -110,6 +111,7 @@ $img-width: 35px;
 
 .span-bpm {
   width: $container-width - $img-width;
+  margin-right: 12.5px;
 
   span:first-of-type {
     margin-left: 10px;

@@ -15,7 +15,6 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
   private parentNativeElement: any;
   private defaultDataValue = -1;
-  private halfMarker = this.n === 15 ? 9 : this.n === 30 ? 15 : this.defaultDataValue;
   private margin = { top: 20, right: 20, bottom: 20, left: 30 };
   private dateTimeNow = moment().startOf('minute').subtract(this.n, 'minutes');
   private dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
@@ -45,6 +44,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private svgWidth = 1650;
   private svgHeight = 300;
   private g;
+  private gridG;
   private width = this.svgWidth - this.margin.left - this.margin.right;
   private height = this.svgHeight - this.margin.top - this.margin.bottom;
   private lineCount = 4;
@@ -52,6 +52,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
   private y = d3.scaleLinear().domain([this.yMin, this.yMax]).range([this.height, 0]);
   private line;
+  private halfMarker = () => { return this.n === 15 ? 9 : this.n === 30 ? 15 : this.defaultDataValue };
 
   // Random Uterine Activity Data Generator
   private randomUa = d3.randomUniform(25, 95);
@@ -63,6 +64,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private svgWidthUa = 1650;
   private svgHeightUa = 150;
   private gUa;
+  private gridGUa;
   private widthUa = this.svgWidthUa - this.margin.left - this.margin.right;
   private heightUa = this.svgHeightUa - this.margin.top - this.margin.bottom;
   private xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.widthUa]);
@@ -146,9 +148,14 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .attr("width", "100%")
       .attr("height", this.height);
 
+   
+    this.gridG = this.g.append("g")
+      .attr("class", "grid-lines-g");
+
     // Add Shaded Area Between 120/180 BPM
-    this.g.append("g")
+    this.gridG.append("g")
       .append("rect")
+      .attr("class", "bpm-shaded")
       .attr("x", this.x(this.dateTimeNow.toDate()))
       .attr("y", this.y(180))
       .attr("width", this.width)
@@ -158,8 +165,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
     this.drawXAxes();
 
     // Add X-Axis Minor Gridlines - Vertical
-    this.g.append("g")
-      .attr("class", "grid")
+    this.gridG.append("g")
+      .attr("class", "grid hb-minor-x")
       .attr("transform", "translate(0," + this.height + ")")
       .call(d3.axisBottom(this.x)
         .ticks(d3.timeSecond.every(10))
@@ -168,8 +175,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
     );
 
     // Add Y-Axis Minor Gridlines - Horizontal
-    this.g.append("g")
-      .attr("class", "grid")
+    this.gridG.append("g")
+      .attr("class", "grid hb-minor-y")
       .call(d3.axisLeft(this.y)
         .ticks(24)
         .tickSize(-(this.width), 1, 1)
@@ -177,7 +184,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     );
 
     // Add X-Axis Major Gridlines - Vertical
-    this.g.append("g")
+    this.gridG.append("g")
       .attr("class", "grid-thick hb-major-x")
       .attr("transform", "translate(0," + this.height + ")")
       .call(d3.axisBottom(this.x)
@@ -187,8 +194,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
     );
 
     // Add Y-Axis Major Gridlines - Horizontal
-    this.g.append("g")
-      .attr("class", "grid-thick")
+    this.gridG.append("g")
+      .attr("class", "grid-thick hb-major-y")
       .call(d3.axisLeft(this.y)
         .tickValues([30, 60, 120, 180, 240])
         .tickSize(-(this.width), 1, 1)
@@ -197,7 +204,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
     // Add Y Axes (HeartBeat BPM Axes)
     for (var a = 0; a <= this.n; a += 3) {
-      this.g.append("g")
+      this.gridG.append("g")
         .attr("class", "axis axis--y")
         .attr("transform", "translate(" + this.x(this.dateTimeNow.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
         .call(d3.axisLeft(this.y).tickValues([30, 60, 90, 120, 150, 180, 210, 240])
@@ -218,7 +225,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
       this.dataUaThirtyMin[i] = this.defaultDataValue;
     }
 
-    var svg = d3.select("#uterine-activity-chart")
+    this.uaSvg = d3.select("#uterine-activity-chart")
       .append("div")
       .classed("svg-container", true) //container class to make it responsive
       .append("svg")
@@ -229,15 +236,15 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .data(this.dataUaFifteenMin).enter();
 
     // Setup Initial ViewBox and add Responsive Container to SVG
-    var myWidth = svg.style("width").replace("px", "");
-    var myHeight = svg.style("height").replace("px", "");
+    var myWidth = this.uaSvg.style("width").replace("px", "");
+    var myHeight = this.uaSvg.style("height").replace("px", "");
 
-    svg
+    this.uaSvg
       .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + 5)) // TODO fix this + 5 magic
       .attr('preserveAspectRatio', 'xMinYMin meet')
       .classed("svg-content-responsive", true);
 
-    this.gUa = svg.append("g")
+    this.gUa = this.uaSvg.append("g")
       .attr("width", "100%")
       .attr("transform", "translate(" + this.margin.left + "," + /*this.margin.top*/5 + ")"); // TODO fix this magic
 
@@ -259,14 +266,23 @@ export class HeartrateComponent implements OnInit, OnChanges {
     );
 
     this.gUa.append("defs").append("clipPath")
+      .attr("id", "clip")
+      .append("rect")
+      .attr("width", "100%")
+      .attr("height", this.heightUa);
+
+    this.gridGUa = this.gUa.append("g")
+      .attr("class", "grid-lines-g");
+
+    this.gUa.append("defs").append("clipPath")
       .attr("id", "ua-clip")
       .append("rect")
       .attr("width", "100%")
       .attr("height", this.heightUa);
 
     // Add X-Axis Minor Gridlines - Vertical
-    this.gUa.append("g")
-      .attr("class", "grid")
+    this.gridGUa.append("g")
+      .attr("class", "grid ua-minor-x")
       .attr("transform", "translate(0," + this.heightUa + ")")
       .call(d3.axisBottom(this.xUa)
         .ticks(d3.timeSecond.every(10))
@@ -275,8 +291,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
       );
 
     // Add Y-Axis Minor Gridlines - Horizontal
-    this.gUa.append("g")
-      .attr("class", "grid")
+    this.gridGUa.append("g")
+      .attr("class", "grid ua-minor-y")
       .call(d3.axisLeft(this.yUa)
         .ticks(10)
         .tickSize(-(this.widthUa), 1, 1)
@@ -284,8 +300,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
       );
 
     // Add X-Axis Major Gridlines - Vertical
-    this.gUa.append("g")
-      .attr("class", "grid-thick")
+    this.gridGUa.append("g")
+      .attr("class", "grid-thick ua-major-x")
       .attr("transform", "translate(0," + this.heightUa + ")")
       .call(d3.axisBottom(this.xUa)
         .ticks(d3.timeMinute.every(1))
@@ -294,8 +310,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
       );
 
     // Add Y-Axis Major Gridlines - Horizontal
-    this.gUa.append("g")
-      .attr("class", "grid-thick")
+    this.gridGUa.append("g")
+      .attr("class", "grid-thick ua-major-y")
       .call(d3.axisLeft(this.yUa)
         .tickValues([0, 50, 100])
         .tickSize(-(this.widthUa), 1, 1)
@@ -312,11 +328,139 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
   }
 
+  redrawGridlines() {
+    this.g.selectAll(".axis--y").data([]).exit().remove();
+    this.g.selectAll(".hb-major-x, .hb-major-y").data([]).exit().remove();
+    this.g.selectAll(".hb-minor-x, .hb-minor-y").data([]).exit().remove();
+    this.g.selectAll(".bpm-shaded").remove();
+    this.gUa.selectAll("defs").remove();
+    this.gUa.selectAll(".axis--y").data([]).exit().remove();
+    this.gUa.selectAll(".ua-major-x, .ua-major-y").data([]).exit().remove();
+    this.gUa.selectAll(".ua-minor-x, .ua-minor-y").data([]).exit().remove();
+
+    var myHeight = this.uaSvg.style("height").replace("px", "");
+    this.gUa.append("defs").append("clipPath")
+      .attr("id", "ua-clip")
+      .append("rect")
+      .attr("width", "100%")
+      .attr("height", +myHeight - 5);
+
+    // Set Tick Values
+    var tickValuesXMajor = d3.range(0, this.n).map(d => {
+        return this.dateTimeNow.clone().add(d, 'minutes').toDate();
+    });
+
+    var tickValuesXMinor = d3.range(0, this.n * 6).map(d => {
+      return this.dateTimeNow.clone().add(d * 10, 'seconds').toDate();
+    });
+
+    // Add Shaded Area Between 120/180 BPM
+    this.gridG.append("g")
+      .append("rect")
+      .attr("class", "bpm-shaded")
+      .attr("x", this.x(this.dateTimeNow.toDate()))
+      .attr("y", this.y(180))
+      .attr("width", this.width)
+      .attr("height", this.y(120) - this.y(180))
+      .attr("fill", "#f6f6f6");
+
+    // Add X-Axis Minor Gridlines - Vertical (HB)
+    this.gridG.append("g")
+      .attr("class", "grid hb-minor-x")
+      .attr("transform", "translate(0," + this.height + ")")
+      .call(d3.axisBottom(this.x)
+        .tickValues(tickValuesXMinor)
+        .tickSize(-(this.height), 1, 0)
+        .tickFormat("")
+    );
+
+    // Add X-Axis Minor Gridlines - Vertical (UA)
+    this.gridGUa.append("g")
+      .attr("class", "grid ua-minor-x")
+      .attr("transform", "translate(0," + this.heightUa + ")")
+      .call(d3.axisBottom(this.xUa)
+        .tickValues(tickValuesXMinor)
+        .tickSize(-(this.heightUa), 1, 0)
+        .tickFormat("")
+      );
+
+    // Add X-Axis Major Gridlines - Vertical (HB)
+    this.gridG.append("g")
+      .attr("class", "grid-thick hb-major-x")
+      .attr("transform", "translate(0," + this.height + ")")
+      .call(d3.axisBottom(this.x)
+        .tickValues([this.dateTimeNMins.toDate()].concat(tickValuesXMajor))
+        .tickSize(-(this.height), 1, 1)
+        .tickFormat("")
+    );
+
+    // Add X-Axis Major Gridlines - Vertical (UA)
+    this.gridGUa.append("g")
+      .attr("class", "grid-thick ua-major-x")
+      .attr("transform", "translate(0," + this.heightUa + ")")
+      .call(d3.axisBottom(this.xUa)
+        .tickValues([this.dateTimeNMins.toDate()].concat(tickValuesXMajor))
+        .tickSize(-(this.heightUa), 1, 1)
+        .tickFormat("")
+    );
+
+    // Add Y-Axis Minor Gridlines - Horizontal (UA)
+    this.gridGUa.append("g")
+      .attr("class", "grid ua-minor-y")
+      .call(d3.axisLeft(this.yUa)
+        .ticks(10)
+        .tickSize(-(this.widthUa), 1, 1)
+        .tickFormat("")
+      );
+
+    // Add Y-Axis Major Gridlines - Horizontal (UA)
+    this.gridGUa.append("g")
+      .attr("class", "grid-thick ua-major-y")
+      .call(d3.axisLeft(this.yUa)
+        .tickValues([0, 50, 100])
+        .tickSize(-(this.widthUa), 1, 1)
+        .tickFormat("")
+    );
+
+    // Add Y-Axis Minor Gridlines - Horizontal (HB)
+    this.gridG.append("g")
+      .attr("class", "grid hb-minor-y")
+      .call(d3.axisLeft(this.y)
+        .ticks(24)
+        .tickSize(-(this.width), 1, 1)
+        .tickFormat("")
+    );
+
+    // Add Y-Axis Major Gridlines - Horizontal HB)
+    this.gridG.append("g")
+      .attr("class", "grid-thick hb-major-y")
+      .call(d3.axisLeft(this.y)
+        .tickValues([30, 60, 120, 180, 240])
+        .tickSize(-(this.width), 1, 1)
+        .tickFormat("")
+    );
+
+    // Add Y Axes (HeartBeat BPM Axes & UA Axes)
+    for (var a = 0; a <= this.n; a += 3) {
+      this.gridG.append("g")
+        .attr("class", "axis axis--y")
+        .attr("transform", "translate(" + this.x(this.dateTimeNow.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
+        .call(d3.axisLeft(this.y).tickValues([30, 60, 90, 120, 150, 180, 210, 240])
+          .tickSize(0, 0, 0));
+
+      this.gridGUa.append("g")
+        .attr("class", "axis axis--y")
+        .attr("transform", "translate(" + this.x(this.dateTimeNow.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
+        .call(d3.axisLeft(this.yUa).tickValues([0, 25, 50, 75, 100])
+          .tickSize(0, 0, 0));
+    }
+  }
+
   drawXAxes() {
 
     // Set Tick Values
     var tickValues = d3.range(3, this.n, 3).map(d => {
-      if (d !== this.halfMarker && d % 3 === 0) {
+      if (d !== this.halfMarker() && d % 3 === 0) {
         return this.dateTimeNow.clone().add(d, 'minutes').toDate();
       }
     });
@@ -334,13 +478,14 @@ export class HeartrateComponent implements OnInit, OnChanges {
         .tickSize(0, 1, 0)
     );
 
+
     // Add X-Axis (Middle Interval Tick)
     this.g.append("g")
       .attr("class", "axis axis--x")
       .attr("transform", "translate(0," + this.y(this.yMin) + ")")
       .call(d3.axisBottom(this.x)
         .tickValues([
-          this.dateTimeNow.clone().add(this.halfMarker, 'minutes').toDate()
+          this.dateTimeNow.clone().add(this.halfMarker(), 'minutes').toDate()
         ])
         .tickFormat(d3.timeFormat("%I:%M %d %b, %Y"))
         .tickSize(0, 1, 0)
@@ -534,12 +679,13 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
     if (this.n === 15) {
 
+      // Re-Adjust HeartBeat / UA X Time Scales
       this.dateTimeNow = this.dateTimeNow.add(15, 'minutes');
       this.dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
       this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
       this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
 
-      // Remove HeartBeat / UA Paths
+      // Update HeartBeat / UA Path Data
       var clipPathGs = this.g.selectAll("g[clip-path='url(#clip)']");
       var paths = clipPathGs.selectAll("path").data([]).exit();
 
@@ -552,14 +698,68 @@ export class HeartrateComponent implements OnInit, OnChanges {
         selectedPath.data([this.dataFifteenMin[i]]).enter();
       }
 
+      // Re-Adjust HB SVG Size / ViewBox
+      var svgContainerHb = this.hbSvg.select(function () { return this.parentNode; });
+      svgContainerHb.remove();
+
+      this.hbSvg = d3.select("#heartrate-chart")
+        .style("height", (this.svgHeight) + "px")
+        .append("div")
+          .classed("svg-container", true) //container class to make it responsive
+          .style("height", (this.svgHeight) + "px")
+        .append("svg")
+          .attr("width", "100%")
+          .attr("height", this.svgHeight);
+
+      var myWidthHb = this.hbSvg.style("width").replace("px", "");
+      var myHeightHb = this.hbSvg.style("height").replace("px", "");
+
+      this.y = d3.scaleLinear().domain([this.yMin, this.yMax]).range([+myHeightHb - this.margin.top - this.margin.bottom, 0]);
+
+      this.hbSvg
+        .attr('viewBox', '0 0 ' + +myWidthHb + ' ' + (+myHeightHb + 10)) // TODO fix this + 10 magic
+        .attr('preserveAspectRatio', 'xMinYMin meet')
+        .classed("svg-content-responsive", true);
+
+      this.hbSvg.node().appendChild(this.g.node());
+
+      // Re-Adjust UA SVG Size / ViewBox
+      var svgContainerUa = this.uaSvg.select(function () { return this.parentNode; });
+      svgContainerUa.remove();
+
+      this.uaSvg = d3.select("#uterine-activity-chart")
+        .style("height", this.svgHeightUa + "px")
+        .append("div")
+          .classed("svg-container", true) //container class to make it responsive
+          .style("height", this.svgHeightUa + "px")
+        .append("svg")
+          .attr("width", "100%")
+          .attr("height", this.svgHeightUa);
+
+      d3.selectAll("#uterine-activity-chart > svg")
+        .data(this.dataUaFifteenMin).enter();
+
+      var myWidth = this.uaSvg.style("width").replace("px", "");
+      var myHeight = this.uaSvg.style("height").replace("px", "");
+
+      this.yUa = d3.scaleLinear().domain([0, 100]).range([(+myHeight - this.margin.top - this.margin.bottom), 0]);
+
+      this.uaSvg
+        .attr('viewBox', '0 0 ' + +myWidth + ' ' + (+myHeight + 5)) // TODO fix this + 5 magic
+        .attr('preserveAspectRatio', 'xMinYMin meet')
+        .classed("svg-content-responsive", true);
+
+      this.uaSvg.node().appendChild(this.gUa.node());
+
     } else if (this.n === 30) {
 
+      // Re-Adjust HeartBeat / UA X Time Scales
       this.dateTimeNow = this.dateTimeNow.subtract(15, 'minutes');
       this.dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
       this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
       this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
 
-      // Remove HeartBeat / UA Paths
+      // Update HeartBeat / UA Path Data
       var clipPathGs = this.g.selectAll("g[clip-path='url(#clip)']");
       var paths = clipPathGs.selectAll("path").data([]).exit();
 
@@ -571,10 +771,64 @@ export class HeartrateComponent implements OnInit, OnChanges {
         var selectedPath = this.g.select("path[data-color-idx='" + i + "']"); 
         selectedPath.data([this.dataThirtyMin[i]]).enter();
       }
+
+      // Re-Adjust HB SVG Size / ViewBox
+      var svgContainerHb = this.hbSvg.select(function () { return this.parentNode; });
+      svgContainerHb.remove();
+
+      this.hbSvg = d3.select("#heartrate-chart")
+        .style("height", (this.svgHeight / 2) + "px")
+        .append("div")
+          .classed("svg-container", true) //container class to make it responsive
+         .style("height", (this.svgHeight / 2) + "px")
+        .append("svg")
+          .attr("width", "100%")
+          .attr("height", (this.svgHeight / 2));
+
+      var myWidthHb = this.hbSvg.style("width").replace("px", "");
+      var myHeightHb = this.hbSvg.style("height").replace("px", "");
+
+      this.y = d3.scaleLinear().domain([this.yMin, this.yMax]).range([+myHeightHb, 0]);
+
+      this.hbSvg
+        .attr('viewBox', '0 0 ' + +myWidthHb + ' ' + (+myHeightHb + 5)) // TODO fix this + 10 magic
+        .attr('preserveAspectRatio', 'xMinYMin meet')
+        .classed("svg-content-responsive", true);
+
+      this.hbSvg.node().appendChild(this.g.node());
+
+      // Re-Adjust UA SVG Size / ViewBox
+      var svgContainerUa = this.uaSvg.select(function () { return this.parentNode; });
+      svgContainerUa.remove();
+      
+      this.uaSvg = d3.select("#uterine-activity-chart")
+        .style("height", (this.svgHeightUa / 2) + "px")
+        .append("div")
+          .classed("svg-container", true) //container class to make it responsive
+          .style("height", (this.svgHeightUa / 2) + "px")
+        .append("svg")
+          .attr("width", "100%")
+          .attr("height", (this.svgHeightUa / 2));
+
+      d3.selectAll("#uterine-activity-chart > svg")
+        .data(this.dataUaThirtyMin).enter();
+
+      var myWidthUa = this.uaSvg.style("width").replace("px", "");
+      var myHeightUa = this.uaSvg.style("height").replace("px", "");
+
+      this.yUa = d3.scaleLinear().domain([0, 100]).range([+myHeightUa - 5, 0]);
+
+      this.uaSvg
+        .attr('viewBox', '0 0 ' + +myWidthUa + ' ' + (+myHeightUa + 2.5)) // TODO fix this + 2.5 magic
+        .attr('preserveAspectRatio', 'xMinYMin meet')
+        .classed("svg-content-responsive", true);
+
+      this.uaSvg.node().appendChild(this.gUa.node());
     }
 
     // Re-Draw X Axes
     this.g.selectAll(".axis--x").data([]).exit().remove();
     this.drawXAxes();
+    this.redrawGridlines();
   }
 }
