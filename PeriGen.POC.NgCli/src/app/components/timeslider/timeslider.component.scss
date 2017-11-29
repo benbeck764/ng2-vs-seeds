@@ -1,0 +1,30 @@
+#timeslider-chart {
+  height: 150px;
+}
+
+.svg-container {
+  display: inline-block;
+  position: relative;
+  width: 100%;
+  height: inherit;
+  //padding-bottom: 100%; /* aspect ratio */
+  vertical-align: top;
+  overflow: hidden;
+}
+
+.svg-content-responsive {
+  display: inline-block;
+  position: absolute;
+  /*top: 10px;*/
+  left: 0;
+}
+
+.viewport {
+  stroke: grey;
+  fill: black;
+  fill-opacity: 0.3;
+
+  .selection {
+    fill: green;
+  }
+}
