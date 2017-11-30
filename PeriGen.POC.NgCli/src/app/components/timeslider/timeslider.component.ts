@@ -16,19 +16,19 @@ export class TimesliderComponent implements OnInit {
   private currentHours: number = 4;
   private btnValue: string = "30 Minute View";
 
-  private defaultDataValue = -1;
-  private margin = { top: 5, right: 20, bottom: 30, left: 30 };
-  private pixelsPerMinute = 15;
+  private defaultDataValue: number = -1;
+  private margin: any = { top: 5, right: 20, bottom: 30, left: 30 };
+  private pixelsPerMinute: number = 15;
 
-  private dateTimeNow = moment().startOf('minute').subtract(this.currentHours, 'hours');
-  private dateTimeNHours = this.dateTimeNow.clone().add(this.currentHours, 'hours');
+  private dateTimeNow: moment.Moment = moment().startOf('minute').subtract(this.currentHours, 'hours');
+  private dateTimeNHours: moment.Moment = this.dateTimeNow.clone().add(this.currentHours, 'hours');
 
-  private sliderDateTimeEnd = this.dateTimeNHours.clone();
-  private sliderDateTimeStart = this.dateTimeNHours.clone().subtract(this.currentN, 'minutes');
-  private sliderOffset = moment.duration(this.dateTimeNow.clone().diff(this.sliderDateTimeStart.clone()));
+  private sliderDateTimeEnd: moment.Moment = this.dateTimeNHours.clone();
+  private sliderDateTimeStart: moment.Moment = this.dateTimeNHours.clone().subtract(this.currentN, 'minutes');
+  private sliderOffset: moment.Duration = moment.duration(this.dateTimeNow.clone().diff(this.sliderDateTimeStart.clone()));
 
-  private yMinHb = 30;
-  private yMaxHb = 240;
+  private yMinHb: number = 30;
+  private yMaxHb: number = 240;
 
   private tsSvg;
   private tsSvgWidth = 1650;
@@ -36,6 +36,7 @@ export class TimesliderComponent implements OnInit {
   private g;
   private navG;
   private xAxisNavG;
+  private sliderTimeTicksG;
   private viewPortG;
   private brush;
 
@@ -47,30 +48,40 @@ export class TimesliderComponent implements OnInit {
 
   constructor() { }
 
-  onBrushEnd(d3Element) {
+  findClosestSnapWindow(newTimeFrame: DateTimeFrame): DateTimeFrame {
 
-    if (!d3.event.sourceEvent || !d3.event.selection) return; // Only transition after input and valid selection
+    // Get the difference between the end of the slider axis and end of slider time frame
+    var duration = moment.duration(this.dateTimeNHours.clone().diff(newTimeFrame.endDateTime));
+    // Round this get the nearest window of time
+    var roundedDurationMins = Math.round(duration.asMinutes() / this.currentN) * this.currentN;
+
+    // Set the new slider window range
+    var newEndTime = this.dateTimeNHours.clone().subtract(roundedDurationMins, 'minutes');
+    var newStartTime = newEndTime.clone().subtract(this.currentN, 'minutes');
+    return new DateTimeFrame(newStartTime, newEndTime);
+  }
+
+  onBrushStart(d3Element) {
+    // Only transition after input and valid selection
+    if (!d3.event.sourceEvent || !d3.event.selection) return;
+
+    // Remove old ticks
+    this.g.selectAll(".slider-ticks").remove();
+  }
+
+  onBrushEnd(d3Element) {
+    // Only transition after input and valid selection
+    if (!d3.event.sourceEvent || !d3.event.selection) return; 
 
     // Get the current time extent of viewport
     var viewportExtent = d3.event.selection;
     var newStart = moment(this.x.invert(viewportExtent[0]));
     var newEnd = moment(this.x.invert(viewportExtent[1]));
 
-    var newXStart: number;
-    var newXEnd: number;
-
-    // Slider moved to the right (add N minutes to snap right)
-    if (this.sliderDateTimeStart.toDate() < newStart.toDate() &&
-          this.sliderDateTimeEnd.toDate() < newEnd.toDate()) {
-      newXStart = this.x(this.sliderDateTimeStart.clone().add(this.currentN, 'minutes').toDate());
-      newXEnd = this.x(this.sliderDateTimeEnd.clone().add(this.currentN, 'minutes').toDate());
-
-    // Slider moved to the left (subtract N minutes to snap left)
-    } else if (this.sliderDateTimeStart.toDate() > newStart.toDate() &&
-          this.sliderDateTimeEnd.toDate() > newEnd.toDate()) {
-      newXStart = this.x(this.sliderDateTimeStart.clone().subtract(this.currentN, 'minutes').toDate());
-      newXEnd = this.x(this.sliderDateTimeEnd.clone().subtract(this.currentN, 'minutes').toDate());
-    }
+    // Find closest currentN minute window to "snap" to
+    var closestDateTimeWindow = this.findClosestSnapWindow(new DateTimeFrame(newStart, newEnd));
+    var newXStart : number = this.x(closestDateTimeWindow.startDateTime.toDate());
+    var newXEnd : number = this.x(closestDateTimeWindow.endDateTime.toDate());
 
     // "Snap" the slider to the new location
     d3.select(d3Element).transition().call(this.brush.move, [newXStart, newXEnd]);
@@ -79,7 +90,10 @@ export class TimesliderComponent implements OnInit {
     this.sliderDateTimeStart = moment(this.x.invert(newXStart));
     this.sliderDateTimeEnd = moment(this.x.invert(newXEnd));
 
-    // TODO -- Emit new scale to HeartRate Component
+    // Redraw slider ticks to new location
+    this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
+
+    // Emit New DateTimeFrame up to Parent Component and then back down to HeartRate Component
     this.timeChanged.emit(new DateTimeFrame(this.sliderDateTimeStart, this.sliderDateTimeEnd));
   }
 
@@ -132,6 +146,9 @@ export class TimesliderComponent implements OnInit {
       .extent([[0, 0], [this.getSvgDimensions().width, this.getSvgDimensions().height]])
       .on("end", (data, index, d3Element) => {
         this.onBrushEnd(d3Element[0]);
+      })
+      .on("start", (date, index, d3Element) => {
+        this.onBrushStart(d3Element[0]);
       });
 
     // Create Group & Assign to Brush
@@ -139,14 +156,14 @@ export class TimesliderComponent implements OnInit {
       .attr("class", "viewport")
       .call(this.brush)
       .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]) // Setup initial slider location
-      .selectAll("rect")
-      .attr("height", this.getSvgDimensions().height);
+        .selectAll("rect")
+        .attr("height", this.getSvgDimensions().height);
 
-    //d3.select(this.viewPortG).call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]); // Setup initial slider location
+    // Add Initial Slider Ticks
+    this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
   }
 
   drawXAxis() {
-
     // Add X-Axis (Interval Ticks)
     this.xAxisNavG = this.g.append("g")
       .attr("class", "axis axis--x")
@@ -155,7 +172,31 @@ export class TimesliderComponent implements OnInit {
         .ticks(d3.timeHour.every(1))
         .tickFormat(d3.timeFormat("%I:%M"))
         .tickSize(-(this.tsSvgHeight), 1, 0)
+    );
+
+    // Add dashed lines and move the time tick text up
+    this.xAxisNavG.selectAll("line").attr("stroke-dasharray", 2);
+    this.xAxisNavG .selectAll("text").attr("y", -75);
+  }
+
+  drawTimeSliderTicks(newStart: moment.Moment, newEnd: moment.Moment) {
+
+    // Remove old ticks
+    this.g.selectAll(".slider-ticks").remove();
+
+    // Append new ticks
+    this.sliderTimeTicksG = this.g.append("g")
+      .attr("class", "slider-ticks")
+      .attr("transform", "translate(0," + (this.yHb(this.yMinHb)) + ")")
+      .call(d3.axisBottom(this.x)
+        .tickValues([newStart.toDate(), newEnd.toDate()])
+        .tickFormat(d3.timeFormat("%I:%M"))
+        .tickSize(-(this.tsSvgHeight), 1, 0)
       );
+
+    // Remove tick lines and move text
+    this.sliderTimeTicksG.selectAll("line").remove();
+    this.sliderTimeTicksG.selectAll("text").attr("y", -75);
   }
 
   ngOnInit() {
@@ -177,10 +218,31 @@ export class TimesliderComponent implements OnInit {
     }
 
     this.emitUpdate();
+    this.updateSliderStartEnd();
   }
 
   emitUpdate() {
     this.nChanged.emit(this.currentN);
+  }
+
+  updateSliderStartEnd() {
+    if (this.currentN === 15) {
+      this.sliderDateTimeStart = this.sliderDateTimeStart.clone().add(15, 'minutes');
+    } else if (this.currentN === 30) {
+      var tempTimeStart = this.sliderDateTimeStart.clone().subtract(15, 'minutes');
+
+      // We're as far left as we can go, move it back
+      if (tempTimeStart.toDate() < moment(this.x.invert(0)).toDate()) {
+        this.sliderDateTimeStart = moment(this.x.invert(0));
+        this.sliderDateTimeEnd = this.sliderDateTimeStart.clone().add(30, 'minutes');
+      } else {
+        this.sliderDateTimeStart = this.sliderDateTimeStart.clone().subtract(15, 'minutes');
+      }
+    }
+
+    // Move the slider start (or end?) to the new location
+    d3.select(".viewport").transition().call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
+    this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
   }
 
   private getSvgDimensions(): SvgDimension {
