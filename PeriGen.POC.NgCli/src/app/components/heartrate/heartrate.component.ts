@@ -1,6 +1,7 @@
 import { Component, OnInit, OnChanges, ElementRef, ViewEncapsulation, Input, SimpleChange } from '@angular/core';
 import * as d3 from 'd3';
 import * as moment from 'moment';
+import { DateTimeFrame } from "../parent/parent.component";
 
 export class SvgDimension {
   width: number;
@@ -20,7 +21,7 @@ export class SvgDimension {
 export class HeartrateComponent implements OnInit, OnChanges {
 
   @Input() n: number = 15;
-  private firstEmit: boolean = true;
+  @Input() newXTimeFrame: DateTimeFrame;
 
   private parentNativeElement: any;
   private defaultDataValue = -1;
@@ -544,11 +545,15 @@ export class HeartrateComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: { [propKey: string]: SimpleChange }) {
-    var newN = changes['n'].currentValue;
-    if (typeof(newN) === "undefined") { return; }
+    var newN = changes['n'];
+    if (typeof (newN) !== "undefined" && typeof (newN.currentValue) !== "undefined") {
+      if (!newN.firstChange) { this.toggleInterval(newN.currentValue); }
+    }
 
-    if (!this.firstEmit) { this.toggleInterval(newN); }
-    this.firstEmit = false;
+    var newXTimeFrame = changes['newXTimeFrame'];
+    if (typeof (newXTimeFrame) !== "undefined" && typeof (newXTimeFrame.currentValue) !== "undefined") {
+      if (!newXTimeFrame.firstChange) { this.toggleXAxis(newXTimeFrame.currentValue); }
+    }
   }
 
   tick(d3Element): void {
@@ -680,6 +685,19 @@ export class HeartrateComponent implements OnInit, OnChanges {
       default:
         break;
     }
+  }
+
+  toggleXAxis(newDateTimeFrame: DateTimeFrame) {
+
+    // Reset Time Variables to new DateTimeFrame
+    this.dateTimeNow = newDateTimeFrame.startDateTime;
+    this.dateTimeNMins = newDateTimeFrame.endDateTime;
+
+    // Reset Time Scales
+    this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
+    this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
+
+    // TODO -- Watermark as historic (maybe include isHistoric bool in DateTimeFrame?)
   }
 
   toggleInterval(newInterval: number): void {

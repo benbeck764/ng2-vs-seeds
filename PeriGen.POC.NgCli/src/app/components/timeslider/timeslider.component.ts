@@ -2,7 +2,7 @@ import { Component, OnInit, Output, EventEmitter, ViewEncapsulation } from '@ang
 import * as d3 from 'd3';
 import * as moment from 'moment';
 import { SvgDimension } from "../heartrate/heartrate.component";
-
+import { DateTimeFrame } from "../parent/parent.component";
 
 @Component({
   selector: 'pg-timeslider',
@@ -37,35 +37,50 @@ export class TimesliderComponent implements OnInit {
   private navG;
   private xAxisNavG;
   private viewPortG;
+  private brush;
 
   private x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNHours.toDate()]).range([0, this.tsSvgWidth]);
   private yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.tsSvgHeight, 0]);
 
   @Output() nChanged = new EventEmitter<number>();
+  @Output() timeChanged = new EventEmitter<DateTimeFrame>();
 
   constructor() { }
 
-  onBrush() {
-    // get the current time extent of viewport
+  onBrushEnd(d3Element) {
+
+    if (!d3.event.sourceEvent || !d3.event.selection) return; // Only transition after input and valid selection
+
+    // Get the current time extent of viewport
     var viewportExtent = d3.event.selection;
-    this.sliderDateTimeStart = moment(this.x.invert(viewportExtent[0]));
-    this.sliderDateTimeEnd = moment(this.x.invert(viewportExtent[1]));
+    var newStart = moment(this.x.invert(viewportExtent[0]));
+    var newEnd = moment(this.x.invert(viewportExtent[1]));
 
-    //// Compute viewport extent in milliseconds
-    //intervalViewport = endTimeViewport.getTime() - startTimeViewport.getTime();
-    this.sliderOffset = moment.duration(this.dateTimeNow.clone().diff(this.sliderDateTimeStart.clone()));
+    var newXStart: number;
+    var newXEnd: number;
 
-        //// handle invisible viewport
-        //if (intervalViewport == 0) {
-        //  intervalViewport = maxSeconds * 1000;
-        //  offsetViewport = 0;
-        //}
+    // Slider moved to the right (add N minutes to snap right)
+    if (this.sliderDateTimeStart.toDate() < newStart.toDate() &&
+          this.sliderDateTimeEnd.toDate() < newEnd.toDate()) {
+      newXStart = this.x(this.sliderDateTimeStart.clone().add(this.currentN, 'minutes').toDate());
+      newXEnd = this.x(this.sliderDateTimeEnd.clone().add(this.currentN, 'minutes').toDate());
 
-        //// update the x domain of the main chart
-        // TODO -- Emit new scale to HeartRate Component
+    // Slider moved to the left (subtract N minutes to snap left)
+    } else if (this.sliderDateTimeStart.toDate() > newStart.toDate() &&
+          this.sliderDateTimeEnd.toDate() > newEnd.toDate()) {
+      newXStart = this.x(this.sliderDateTimeStart.clone().subtract(this.currentN, 'minutes').toDate());
+      newXEnd = this.x(this.sliderDateTimeEnd.clone().subtract(this.currentN, 'minutes').toDate());
+    }
 
-        // update display
-        //refresh();
+    // "Snap" the slider to the new location
+    d3.select(d3Element).transition().call(this.brush.move, [newXStart, newXEnd]);
+
+    // Set the slider start/end variables to the new position
+    this.sliderDateTimeStart = moment(this.x.invert(newXStart));
+    this.sliderDateTimeEnd = moment(this.x.invert(newXEnd));
+
+    // TODO -- Emit new scale to HeartRate Component
+    this.timeChanged.emit(new DateTimeFrame(this.sliderDateTimeStart, this.sliderDateTimeEnd));
   }
 
   initTimeSliderGraph() {
@@ -112,25 +127,22 @@ export class TimesliderComponent implements OnInit {
     // Add Group for X-Axis & Draw Time Ticks
     this.drawXAxis();
 
-    console.log('this.sliderDateTimeStart.toDate(): ' + this.sliderDateTimeStart.toDate());
-    console.log('this.sliderDateTimeEnd.toDate(): ' + this.sliderDateTimeEnd.toDate());
-    console.log('this.x(this.sliderDateTimeStart.toDate()): ' + this.x(this.sliderDateTimeStart.toDate()));
-    console.log('this.x(this.sliderDateTimeEnd.toDate()): ' + this.x(this.sliderDateTimeEnd.toDate()));
-
     // Create Brush (Slider Time Domain)
-    var brush = d3.brushX()
+    this.brush = d3.brushX()
       .extent([[0, 0], [this.getSvgDimensions().width, this.getSvgDimensions().height]])
-      .on("brush", () => {
-        this.onBrush();
+      .on("end", (data, index, d3Element) => {
+        this.onBrushEnd(d3Element[0]);
       });
 
     // Create Group & Assign to Brush
     this.viewPortG = this.g.append("g")
       .attr("class", "viewport")
-      .call(brush)
-      .call(brush.move, [0, 100])
+      .call(this.brush)
+      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]) // Setup initial slider location
       .selectAll("rect")
       .attr("height", this.getSvgDimensions().height);
+
+    //d3.select(this.viewPortG).call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]); // Setup initial slider location
   }
 
   drawXAxis() {

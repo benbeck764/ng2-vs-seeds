@@ -24,7 +24,16 @@
   fill: black;
   fill-opacity: 0.3;
 
+  .overlay {
+    pointer-events: none !important;
+  }
+
   .selection {
     fill: green;
+  }
+
+  .handle {
+    pointer-events: none !important;
+    display: none !important;
   }
 }

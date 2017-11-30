@@ -11,8 +11,8 @@
       <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne">
         <div class="card-block">
           <div class="container mt-3 mb-2">
-            <pg-heartrate [n]="currentInterval"></pg-heartrate>
-            <pg-timeslider (nChanged)="intervalChanged($event)"></pg-timeslider>
+            <pg-heartrate [n]="currentInterval" [newXTimeFrame]="currentDateTimeFrame"></pg-heartrate>
+            <pg-timeslider (nChanged)="intervalChanged($event)" (timeChanged)="timeChanged($event)"></pg-timeslider>
           </div>
         </div>
       </div>
