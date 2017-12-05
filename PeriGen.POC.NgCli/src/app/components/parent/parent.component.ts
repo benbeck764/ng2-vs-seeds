@@ -1,12 +1,14 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Moment } from "moment/moment";
+import * as moment from 'moment';
 
 export class DateTimeFrame {
-  public startDateTime: Moment;
-  public endDateTime: Moment;
-  constructor(start: Moment, end: Moment) {
+  public startDateTime: moment.Moment;
+  public endDateTime: moment.Moment;
+  public isRealTime: boolean;
+  constructor(start: moment.Moment, end: moment.Moment, isRealTime: boolean) {
     this.startDateTime = start;
     this.endDateTime = end;
+    this.isRealTime = isRealTime;
   }
 }
 
@@ -18,11 +20,16 @@ export class DateTimeFrame {
 export class ParentComponent implements OnInit {
 
   private currentInterval: number;
+  private newTime: moment.Moment;
   private currentDateTimeFrame: DateTimeFrame;
 
   constructor(private cdRef: ChangeDetectorRef) { }
 
   ngOnInit() { }
+
+  timeIncremented(newTime: moment.Moment): void {
+    this.newTime = newTime;
+  }
 
   intervalChanged(interval: number): void {
     this.currentInterval = interval;
