@@ -12,6 +12,11 @@ export class SvgDimension {
   }
 }
 
+export class DataPoint {
+  timestamp: moment.Moment;
+  value: number;
+}
+
 @Component({
   selector: 'pg-heartrate',
   templateUrl: './heartrate.component.html',
@@ -26,12 +31,13 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private parentNativeElement: any;
   private defaultDataValue = -1;
   private margin = { top: 5, right: 20, bottom: 30, left: 30 };
-  private dateTimeNow = moment().startOf('minute').subtract(this.n, 'minutes');
+  private dateTimeNow = moment().subtract(this.n, 'minutes');
   private dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
 
   // Data Arrays to Hold Chart Data
   private dataFifteenMin;
   private dataThirtyMin;
+  private dataAll;
   private dataUaFifteenMin;
   private dataUaThirtyMin;
 
@@ -102,9 +108,11 @@ export class HeartrateComponent implements OnInit, OnChanges {
     // Initialize Data Array w/ Default Values (-1)
     this.dataFifteenMin = new Array(this.lineCount);
     this.dataThirtyMin = new Array(this.lineCount);
+    this.dataAll = new Array(this.lineCount);
     for (var i = 0; i < this.lineCount; i++) {
       this.dataFifteenMin[i] = d3.range(this.n * this.ticksPerSecondHb * 60).map(d => this.defaultDataValue);
       this.dataThirtyMin[i] = d3.range(this.n * this.ticksPerSecondHb * 60 * 2).map(d => this.defaultDataValue);
+      this.dataAll[i] = d3.range(this.n * this.ticksPerSecondHb * 60 * 2).map(d => this.defaultDataValue);
     }
 
     // Create SVG and Bind Data 
@@ -566,7 +574,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
     var myData15 = this.dataFifteenMin[colorIdx];
     var myData30 = this.dataThirtyMin[colorIdx];
-    if (myData15 === undefined || myData30 === undefined) return;
+    var myDataAll = this.dataAll[colorIdx];
+    if (myData15 === undefined || myData30 === undefined || myDataAll === undefined) return;
 
     // Configure New Heartbeat Data "Randomly" For Each Baby
     var newData = this.defaultDataValue;
@@ -588,6 +597,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
     myData15.push(newData);
     myData30.push(newData);
+    myDataAll.push(newData);
 
     this.updateBpm(newData, colorIdx);
 
@@ -696,6 +706,15 @@ export class HeartrateComponent implements OnInit, OnChanges {
     // Reset Time Scales
     this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
     this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
+
+    // TODO -- Reset Data to new DateTimeFrame
+    //var clipPathGs = this.g.selectAll("g[clip-path='url(#clip)']");
+    //var paths = clipPathGs.selectAll("path").data([]).exit();
+
+    //for (var i = 0; i < this.lineCount; i++) {
+    //  var selectedPath = this.g.select("path[data-color-idx='" + i + "']");
+    //  selectedPath.data([this.dataAll[i]]).enter();
+    //}
 
     // TODO -- Watermark as historic (maybe include isHistoric bool in DateTimeFrame?)
   }

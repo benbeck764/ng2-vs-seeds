@@ -201,7 +201,7 @@ export class TimesliderComponent implements OnInit {
 
   ngOnInit() {
     console.log('Timeslider Component');
-    this.emitUpdate();
+    //this.emitUpdate();
 
     this.initTimeSliderGraph();
   }
