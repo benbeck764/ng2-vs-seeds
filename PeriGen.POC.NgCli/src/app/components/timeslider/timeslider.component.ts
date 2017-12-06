@@ -1,8 +1,8 @@
-import { Component, OnInit, OnChanges, Input, Output, EventEmitter, ViewEncapsulation, SimpleChange } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, Output, EventEmitter, ViewEncapsulation, SimpleChange, ElementRef, Renderer2 } from '@angular/core';
 import * as d3 from 'd3';
 import * as moment from 'moment';
-import { SvgDimension } from "../heartrate/heartrate.component";
-import { DateTimeFrame } from "../parent/parent.component";
+import { SvgDimension, SvgPosition } from "../heartrate/heartrate.component";
+import { DateTimeFrame, IntervalChanged } from "../parent/parent.component";
 
 @Component({
   selector: 'pg-timeslider',
@@ -16,6 +16,9 @@ export class TimesliderComponent implements OnInit, OnChanges {
   private currentHours: number = 4;
   private btnValue: string = "30 Minute View";
 
+  private toggleText;
+  private textValue: string = "to 30 min";
+
   private defaultDataValue: number = -1;
   private margin: any = { top: 5, right: 20, bottom: 30, left: 30 };
   private pixelsPerMinute: number = 15;
@@ -23,6 +26,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
   private dateTimeNow: moment.Moment = moment().subtract(this.currentHours, 'hours');
   private dateTimeNHours: moment.Moment = this.dateTimeNow.clone().add(this.currentHours, 'hours');
 
+  private isRealTime: boolean;
   private sliderDateTimeEnd: moment.Moment = this.dateTimeNHours.clone();
   private sliderDateTimeStart: moment.Moment = this.dateTimeNHours.clone().subtract(this.currentN, 'minutes');
   private sliderOffset: moment.Duration = moment.duration(this.dateTimeNow.clone().diff(this.sliderDateTimeStart.clone()));
@@ -38,16 +42,17 @@ export class TimesliderComponent implements OnInit, OnChanges {
   private xAxisNavG;
   private sliderTimeTicksG;
   private viewPortG;
+  private viewPortSelection;
   private brush;
 
   private x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNHours.toDate()]).range([0, this.tsSvgWidth]);
   private yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.tsSvgHeight, 0]);
 
   @Input() newTime: moment.Moment;
-  @Output() nChanged = new EventEmitter<number>();
+  @Output() nChanged = new EventEmitter<IntervalChanged>();
   @Output() timeChanged = new EventEmitter<DateTimeFrame>();
 
-  constructor() { }
+  constructor(private _renderer: Renderer2, private _elementRef: ElementRef) { }
 
   findClosestSnapWindow(newTimeFrame: DateTimeFrame): DateTimeFrame {
 
@@ -96,8 +101,8 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     // Emit New DateTimeFrame up to Parent Component and then back down to HeartRate Component
     var xMax: number = this.x(this.x.domain()[1]);
-    var isRealTime: boolean = newXEnd >= xMax; // (Slider is moved all the way to the right)
-    this.timeChanged.emit(new DateTimeFrame(this.sliderDateTimeStart, this.sliderDateTimeEnd, isRealTime));
+    this.isRealTime = newXEnd >= xMax; // (Slider is moved all the way to the right)
+    this.timeChanged.emit(new DateTimeFrame(this.sliderDateTimeStart, this.sliderDateTimeEnd, this.isRealTime));
   }
 
   initTimeSliderGraph() {
@@ -108,6 +113,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
     this.tsSvg = d3.select("#timeslider-chart")
       .append("div")
       .classed("svg-container", true) //container class to make it responsive
+      .style("height", this.tsSvgHeight + "px")
       .append("svg")
       .attr("width", "100%")
       .attr("height", this.tsSvgHeight);
@@ -158,12 +164,32 @@ export class TimesliderComponent implements OnInit, OnChanges {
     this.viewPortG = this.g.append("g")
       .attr("class", "viewport")
       .call(this.brush)
-      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]) // Setup initial slider location
-        .selectAll("rect")
-        .attr("height", this.getSvgDimensions().height);
+      // Setup initial slider location
+      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
+
+
+    this.viewPortG.selectAll("rect")
+      .attr("height", this.getSvgDimensions().height);
 
     // Add Initial Slider Ticks
     this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
+
+    this.viewPortSelection = d3.select(".viewport > .selection");
+    var selectionPosition = this.getSelectionPosition();
+    var selectionDimensions = this.getSelectionDimensions();
+    this.toggleText = this.viewPortG.append("text")
+      .attr("x", (d) => {
+        return selectionPosition.x + (selectionDimensions.width / 2);
+      })
+      .attr("y", (d) => {
+        return selectionPosition.y + selectionDimensions.height;
+      })
+      .attr("dy", ".35em")
+      .style("stroke", "blue")
+      .text(this.textValue); 
+
+    //var selection = this._elementRef.nativeElement.querySelector('.selection');
+    //this._renderer.listen(selection, 'click', this.toggleTime);
   }
 
   drawXAxis() {
@@ -182,7 +208,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     // Add dashed lines and move the time tick text up
     this.xAxisNavG.selectAll("line").attr("stroke-dasharray", 2);
-    this.xAxisNavG .selectAll("text").attr("y", -75);
+    this.xAxisNavG.selectAll("text").attr("y", -75);
   }
 
   drawTimeSliderTicks(newStart: moment.Moment, newEnd: moment.Moment) {
@@ -247,18 +273,22 @@ export class TimesliderComponent implements OnInit, OnChanges {
     if (this.currentN === 15) {
       this.currentN = 30;
       this.btnValue = "15 Minute View";
+      this.textValue = "to 15 min";
     }
     else if (this.currentN === 30) {
       this.currentN = 15;
       this.btnValue = "30 Minute View";
+      this.textValue = "to 30 min";
     }
 
-    this.emitUpdate();
+    this.toggleText.text(this.textValue);
     this.updateSliderStartEnd();
+    this.emitUpdate();
   }
 
   emitUpdate() {
-    this.nChanged.emit(this.currentN);
+    var intervalChanged = new IntervalChanged(this.sliderDateTimeStart, this.sliderDateTimeEnd, this.currentN);
+    this.nChanged.emit(intervalChanged);
   }
 
   updateSliderStartEnd() {
@@ -279,6 +309,18 @@ export class TimesliderComponent implements OnInit, OnChanges {
     // Move the slider start (or end?) to the new location
     d3.select(".viewport").transition().call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
     this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
+  }
+
+  private getSelectionPosition(): SvgPosition {
+    var myX = this.viewPortSelection.attr("x");
+    var myY = this.viewPortSelection.attr("y");
+    return new SvgPosition(+myX, +myY);
+  }
+
+  private getSelectionDimensions(): SvgDimension {
+    var myWidth = this.viewPortSelection.attr("width");
+    var myHeight = this.viewPortSelection.attr("height");
+    return new SvgDimension(+myWidth, +myHeight);
   }
 
   private getSvgDimensions(): SvgDimension {

@@ -1,5 +1,30 @@
-<div class="text-center" id="timeslider-chart"></div>
-<div class="row">
-  <input type="button" [(value)]="btnValue" class="btn btn-primary" (click)="toggleTime()" />
+<div class="container">
+  <div class="text-center">
+   
+  </div>
+  <div class="text-center" id="timeslider-chart">
+    <div class="row ml-0 mr-0">
+      <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6 mt-1">
+        <div class="row">
+          <b>OVERVIEW: last</b>
+          <a href="" class="btn btn-primary ts-hour-btn ts-btn-left">4 h</a>
+          <a href="" class="btn btn-primary ts-hour-btn ts-btn-right">12 h</a>
+          <b>of 36 hours</b>
+        </div>
+      </div>
+      <div class="col-xl-4 col-lg-6 col-md-6 col-sm-6 mt-1">
+        <i class="fa fa-fast-backward mr-2"></i>
+        <i class="fa fa-step-backward mr-2"></i>
+        <i class="fa fa-backward mr-2"></i>
+        <i class="fa fa-pause mr-2"></i>
+        <i class="fa fa-forward mr-2"></i>
+        <i class="fa fa-step-forward mr-2"></i>
+        <i class="fa fa-fast-forward mr-2"></i>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <input type="button" [(value)]="btnValue" class="btn btn-primary" (click)="toggleTime()" />
+  </div>
 </div>
 

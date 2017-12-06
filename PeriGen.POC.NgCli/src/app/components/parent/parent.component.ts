@@ -12,6 +12,17 @@ export class DateTimeFrame {
   }
 }
 
+export class IntervalChanged {
+   public startDateTime: moment.Moment;
+   public endDateTime: moment.Moment;
+   public newN: number;
+   constructor(start: moment.Moment, end: moment.Moment, newN: number) {
+     this.startDateTime = start;
+     this.endDateTime = end;
+     this.newN = newN;
+   }
+}
+
 @Component({
   selector: 'pg-parent',
   templateUrl: './parent.component.html',
@@ -19,7 +30,7 @@ export class DateTimeFrame {
 })
 export class ParentComponent implements OnInit {
 
-  private currentInterval: number;
+  private currentInterval: IntervalChanged;
   private newTime: moment.Moment;
   private currentDateTimeFrame: DateTimeFrame;
 
@@ -31,7 +42,7 @@ export class ParentComponent implements OnInit {
     this.newTime = newTime;
   }
 
-  intervalChanged(interval: number): void {
+  intervalChanged(interval: IntervalChanged): void {
     this.currentInterval = interval;
   }
 

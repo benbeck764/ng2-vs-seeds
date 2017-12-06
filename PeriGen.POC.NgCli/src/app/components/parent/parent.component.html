@@ -12,6 +12,8 @@
         <div class="card-block">
           <div class="container mt-3 mb-2">
             <pg-heartrate [n]="currentInterval" [newXTimeFrame]="currentDateTimeFrame" (timeIncremented)="timeIncremented($event)"></pg-heartrate>
+          </div>
+          <div id="timeslider-div">
             <pg-timeslider (nChanged)="intervalChanged($event)" (timeChanged)="timeChanged($event)" [newTime]="newTime"></pg-timeslider>
           </div>
         </div>

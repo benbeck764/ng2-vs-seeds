@@ -1,7 +1,7 @@
 import { Component, OnInit, OnChanges, ElementRef, ViewEncapsulation, EventEmitter, Input, Output, SimpleChange } from '@angular/core';
 import * as d3 from 'd3';
 import * as moment from 'moment';
-import { DateTimeFrame } from "../parent/parent.component";
+import { DateTimeFrame, IntervalChanged } from "../parent/parent.component";
 
 export class SvgDimension {
   width: number;
@@ -9,6 +9,15 @@ export class SvgDimension {
   constructor(svgWidth, svgHeight) {
     this.width = svgWidth;
     this.height = svgHeight;
+  }
+}
+
+export class SvgPosition {
+  x: number;
+  y: number;
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
   }
 }
 
@@ -354,7 +363,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
   }
 
-  redrawGridlines(n): void {
+  redrawGridlines(interval: IntervalChanged): void {
     this.g.selectAll(".axis--y").data([]).exit().remove();
     this.g.selectAll(".hb-major-x, .hb-major-y").data([]).exit().remove();
     this.g.selectAll(".hb-minor-x, .hb-minor-y").data([]).exit().remove();
@@ -378,19 +387,19 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .attr("height", this.getUASvgDimensions().height);
 
     // Set Tick Values
-    var tickValuesXMajor = d3.range(0, this.n).map(d => {
-        return this.dateTimeNow.clone().add(d, 'minutes').toDate();
+    var tickValuesXMajor = d3.range(0, interval.newN).map(d => {
+      return interval.startDateTime.clone().add(d, 'minutes').toDate();
     });
 
-    var tickValuesXMinor = d3.range(0, this.n * 6).map(d => {
-      return this.dateTimeNow.clone().add(d * 10, 'seconds').toDate();
+    var tickValuesXMinor = d3.range(0, interval.newN * 6).map(d => {
+      return interval.startDateTime.clone().add(d * 10, 'seconds').toDate();
     });
 
     // Add Shaded Area Between 120/180 BPM
     this.gridG.append("g")
       .append("rect")
       .attr("class", "bpm-shaded")
-      .attr("x", this.x(this.dateTimeNow.toDate()))
+      .attr("x", this.x(interval.startDateTime.toDate()))
       .attr("y", this.y(180))
       .attr("width", this.width)
       .attr("height", this.y(120) - this.y(180))
@@ -421,7 +430,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .attr("class", "grid-thick hb-major-x")
       .attr("transform", "translate(0," + (this.getHBSvgDimensions().height) + ")")
       .call(d3.axisBottom(this.x)
-        .tickValues([this.dateTimeNMins.toDate()].concat(tickValuesXMajor))
+        .tickValues([interval.endDateTime.toDate()].concat(tickValuesXMajor))
         .tickSize(-(this.getHBSvgDimensions().height), 1, 1)
         .tickFormat("")
     );
@@ -431,7 +440,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .attr("class", "grid-thick ua-major-x")
       .attr("transform", "translate(0," + (this.getUASvgDimensions().height) + ")")
       .call(d3.axisBottom(this.xUa)
-        .tickValues([this.dateTimeNMins.toDate()].concat(tickValuesXMajor))
+        .tickValues([interval.endDateTime.toDate()].concat(tickValuesXMajor))
         .tickSize(-(this.getUASvgDimensions().height), 1, 1)
         .tickFormat("")
     );
@@ -463,7 +472,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
         .tickFormat("")
     );
 
-    // Add Y-Axis Major Gridlines - Horizontal HB)
+    // Add Y-Axis Major Gridlines - Horizontal (HB)
     this.gridG.append("g")
       .attr("class", "grid-thick hb-major-y")
       .call(d3.axisLeft(this.y)
@@ -473,16 +482,16 @@ export class HeartrateComponent implements OnInit, OnChanges {
     );
 
     // Add Y Axes (HeartBeat BPM Axes & UA Axes)
-    for (var a = 0; a <= this.n; a += 3) {
+    for (var a = 0; a <= interval.newN; a += 3) {
       this.gridG.append("g")
         .attr("class", "axis axis--y")
-        .attr("transform", "translate(" + this.x(this.dateTimeNow.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
+        .attr("transform", "translate(" + this.x(interval.startDateTime.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
         .call(d3.axisLeft(this.y).tickValues([30, 60, 90, 120, 150, 180, 210, 240])
           .tickSize(0, 0, 0));
 
       this.gridGUa.append("g")
         .attr("class", "axis axis--y")
-        .attr("transform", "translate(" + this.xUa(this.dateTimeNow.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
+        .attr("transform", "translate(" + this.xUa(interval.startDateTime.clone().add(a, 'minutes').toDate()) + "," + 0 + ")")
         .call(d3.axisLeft(this.yUa).tickValues([0, 25, 50, 75, 100])
           .tickSize(0, 0, 0));
     }
@@ -497,11 +506,11 @@ export class HeartrateComponent implements OnInit, OnChanges {
     var start = this.dateTimeNow.clone();
     var end = this.dateTimeNMins.clone();
 
-    if (!this.isRealTime) {
+    if (newDateTimeFrame !== null/*!this.isRealTime*/) {
       start = newDateTimeFrame.startDateTime;
       end = newDateTimeFrame.endDateTime;
     }
-    
+
     // Set Tick Values
     var tickValues = d3.range(3, this.n, 3).map(d => {
       if (d !== this.halfMarker() && d % 3 === 0) {
@@ -522,7 +531,6 @@ export class HeartrateComponent implements OnInit, OnChanges {
         .tickSize(0, 1, 0)
     );
 
-
     // Add X-Axis (Middle Interval Tick)
     this.g.append("g")
       .attr("class", "axis axis--x")
@@ -537,7 +545,6 @@ export class HeartrateComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-
     console.log('Heartrate Component');
     this.n = 15;
 
@@ -754,7 +761,6 @@ export class HeartrateComponent implements OnInit, OnChanges {
     var end: moment.Moment;
     // We need to make real-time actually be real-time now
     if (this.isRealTime) {
-
       // Current-Time set to exact time now (moment())
       this.dateTimeNMins = moment();
       this.dateTimeNow = this.dateTimeNMins.clone().subtract(this.n, 'minutes');
@@ -801,12 +807,12 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
   }
 
-  toggleInterval(newInterval: number): void {
+  toggleInterval(newInterval: IntervalChanged): void {
     // Reset n to new n
-    this.n = newInterval;
+    this.n = newInterval.newN;
 
     // Re-Adjust HeartBeat / UA X Time Scales
-    this.reAdjustXTimeScales(this.n);
+    this.reAdjustXTimeScales(newInterval);
 
     // Update HeartBeat / UA Path Data
     this.reAdjustHbAndUaData(this.n);
@@ -838,12 +844,13 @@ export class HeartrateComponent implements OnInit, OnChanges {
       .attr("width", "100%")
       .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
-    // Re-Draw X Axes
-    this.g.selectAll(".axis--x").data([]).exit().remove();
-    this.drawXAxes(null);
+    // TODO -- Timeframe has really changed here...
+    // Re-Draw X-Axes
+    this.drawXAxes(new DateTimeFrame(newInterval.startDateTime, newInterval.endDateTime, this.isRealTime));
 
+    // TODO -- Timeframe has really changed here...    
     // Re-Draw X/Y Grid Lines
-    this.redrawGridlines(this.n);
+    this.redrawGridlines(newInterval);
 
     // Re-Append Groups
     this.g.node().appendChild(this.gridG.node());
@@ -881,17 +888,17 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
   }
 
-  reAdjustXTimeScales(n): void {
-    if (n === 15) {
+  reAdjustXTimeScales(interval: IntervalChanged): void {
+    if (interval.newN === 15) {
       this.dateTimeNow = this.dateTimeNow.add(15, 'minutes');
-      this.dateTimeNMins = this.dateTimeNow.clone().add(n, 'minutes');
-      this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
-      this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
-    } else if (n === 30) {
+      this.dateTimeNMins = this.dateTimeNow.clone().add(interval.newN, 'minutes');
+      this.x = d3.scaleTime().domain([interval.startDateTime.toDate(), interval.endDateTime.toDate()]).range([0, this.getHBSvgDimensions().width]);
+      this.xUa = d3.scaleTime().domain([interval.startDateTime.toDate(), interval.endDateTime.toDate()]).range([0, this.getUASvgDimensions().width]);
+    } else if (interval.newN === 30) {
       this.dateTimeNow = this.dateTimeNow.subtract(15, 'minutes');
-      this.dateTimeNMins = this.dateTimeNow.clone().add(n, 'minutes');
-      this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
-      this.xUa = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNMins.toDate()]).range([0, this.width]);
+      this.dateTimeNMins = this.dateTimeNow.clone().add(interval.newN, 'minutes');
+      this.x = d3.scaleTime().domain([interval.startDateTime.toDate(), interval.endDateTime.toDate()]).range([0, this.getHBSvgDimensions().width]);
+      this.xUa = d3.scaleTime().domain([interval.startDateTime.toDate(), interval.endDateTime.toDate()]).range([0, this.getUASvgDimensions().width]);
     }
   }
 
