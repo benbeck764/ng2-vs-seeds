@@ -34,6 +34,7 @@
     &:hover {
       stroke: #53c7f2;
       stroke-width: 1px;
+      cursor: ew-resize !important;
     }
   }
 
@@ -67,5 +68,11 @@
   &:hover {
     background-color: #e2e2e2 !important;
     color: black !important;
+  }
+}
+
+.toggle-text {
+  &:hover {
+    cursor: pointer;
   }
 }

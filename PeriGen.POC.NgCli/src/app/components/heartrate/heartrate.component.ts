@@ -52,6 +52,9 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private dateTimeNow = moment().subtract(this.n, 'minutes');
   private dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
 
+  private historicDateTimeNow: moment.Moment;
+  private historicDateTimeNMins: moment.Moment;
+
   // Data Arrays to Hold Chart Data
   private dataFifteenMin;
   private dataThirtyMin;
@@ -768,6 +771,10 @@ export class HeartrateComponent implements OnInit, OnChanges {
       start = this.dateTimeNow.clone();
       end = this.dateTimeNMins.clone();
     } else {
+      // Set Global Historic Time Values
+      this.historicDateTimeNow = newDateTimeFrame.startDateTime;
+      this.historicDateTimeNMins = newDateTimeFrame.endDateTime;
+
       // Set Time Variables to new DateTimeFrame
       start = newDateTimeFrame.startDateTime;
       end = newDateTimeFrame.endDateTime;
@@ -810,6 +817,10 @@ export class HeartrateComponent implements OnInit, OnChanges {
   toggleInterval(newInterval: IntervalChanged): void {
     // Reset n to new n
     this.n = newInterval.newN;
+
+    // Reset Historic DateTimeRange Start/End
+    this.historicDateTimeNow = newInterval.startDateTime;
+    this.historicDateTimeNMins = newInterval.endDateTime;
 
     // Re-Adjust HeartBeat / UA X Time Scales
     this.reAdjustXTimeScales(newInterval);

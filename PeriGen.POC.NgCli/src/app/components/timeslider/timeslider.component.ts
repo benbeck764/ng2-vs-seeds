@@ -21,6 +21,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
   private defaultDataValue: number = -1;
   private margin: any = { top: 5, right: 20, bottom: 30, left: 30 };
+  private padding: any = { bottom: 20 };
   private pixelsPerMinute: number = 15;
 
   private dateTimeNow: moment.Moment = moment().subtract(this.currentHours, 'hours');
@@ -36,7 +37,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
   private tsSvg;
   private tsSvgWidth = 1650;
-  private tsSvgHeight = 100;
+  private tsSvgHeight = 125;
   private g;
   private navG;
   private xAxisNavG;
@@ -99,6 +100,9 @@ export class TimesliderComponent implements OnInit, OnChanges {
     // Redraw slider ticks to new location
     this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
 
+    // Move the slider to text to new location
+    this.moveToggleText(false);
+
     // Emit New DateTimeFrame up to Parent Component and then back down to HeartRate Component
     var xMax: number = this.x(this.x.domain()[1]);
     this.isRealTime = newXEnd >= xMax; // (Slider is moved all the way to the right)
@@ -120,7 +124,8 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     // Setup Initial ViewBox and add Responsive Container to SVG
     this.tsSvg
-      .attr('viewBox', '0 0 ' + this.getSvgDimensions().width + ' ' + (this.getSvgDimensions().height + (this.margin.bottom / 3)))
+      .attr('viewBox', '0 0 ' +
+          this.getSvgDimensions().width + ' ' + (this.getSvgDimensions().height + (this.margin.bottom / 3) + 2.5)) // TODO - Magic 2.5
       .attr('preserveAspectRatio', 'xMinYMin meet')
       .classed("svg-content-responsive", true);
 
@@ -134,7 +139,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
       .attr("x", 0)
       .attr("y", 0)
       .attr("width", this.getSvgDimensions().width)
-      .attr("height", this.getSvgDimensions().height)
+      .attr("height", this.getSvgDimensions().height - this.padding.bottom)
       .style("fill", "#F5F5F5")
       .style("shape-rendering", "crispEdges")
       .attr("transform", "translate(0, 0)");
@@ -145,14 +150,11 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     // Define Nav Chart Scales
     this.x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNHours.toDate()]).range([0, this.getSvgDimensions().width]);
-    this.yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.getSvgDimensions().height, 0]);
-
-    // Add Group for X-Axis & Draw Time Ticks
-    this.drawXAxis();
+    this.yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.getSvgDimensions().height - this.padding.bottom, 0]);
 
     // Create Brush (Slider Time Domain)
     this.brush = d3.brushX()
-      .extent([[0, 0], [this.getSvgDimensions().width, this.getSvgDimensions().height]])
+      .extent([[0, 0], [this.getSvgDimensions().width, this.getSvgDimensions().height - this.padding.bottom]])
       .on("end", (data, index, d3Element) => {
         this.onBrushEnd(d3Element[0]);
       })
@@ -164,32 +166,49 @@ export class TimesliderComponent implements OnInit, OnChanges {
     this.viewPortG = this.g.append("g")
       .attr("class", "viewport")
       .call(this.brush)
-      // Setup initial slider location
-      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
+      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]); // Setup initial slider location
 
-
+    // Give a height to all the rectangle components of the viewport
     this.viewPortG.selectAll("rect")
-      .attr("height", this.getSvgDimensions().height);
+      .attr("height", this.getSvgDimensions().height - this.padding.bottom);
+
+    // Add Group for X-Axis & Draw Time Ticks
+    this.drawXAxis();
 
     // Add Initial Slider Ticks
     this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
 
+    // Add Toggle Time Text below Slider Window
     this.viewPortSelection = d3.select(".viewport > .selection");
     var selectionPosition = this.getSelectionPosition();
     var selectionDimensions = this.getSelectionDimensions();
-    this.toggleText = this.viewPortG.append("text")
+    this.toggleText = this.g
+      .append("text")
       .attr("x", (d) => {
         return selectionPosition.x + (selectionDimensions.width / 2);
       })
       .attr("y", (d) => {
-        return selectionPosition.y + selectionDimensions.height;
+        return selectionPosition.y + selectionDimensions.height + 10;
       })
-      .attr("dy", ".35em")
+      .attr("class", "toggle-text d-none")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "0.75em")
+      .attr("text-decoration", "underline")
       .style("stroke", "blue")
-      .text(this.textValue); 
+      .text(this.textValue)
+      .on("click", (d) => {
+        this.toggleTime();
+      });
 
-    //var selection = this._elementRef.nativeElement.querySelector('.selection');
-    //this._renderer.listen(selection, 'click', this.toggleTime);
+    // Hide/Display for the Toggle Time Text when leaving/entering slider
+    this.viewPortSelection
+      .on("mouseenter", (d) => {
+        this.displayToggleText(true);
+      });
+    this.viewPortSelection
+      .on("mouseleave", (d) => {
+        this.displayToggleText(false);
+      });
   }
 
   drawXAxis() {
@@ -203,7 +222,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
       .call(d3.axisBottom(this.x)
         .ticks(d3.timeHour.every(1))
         .tickFormat(d3.timeFormat("%I:%M"))
-        .tickSize(-(this.tsSvgHeight), 1, 0)
+        .tickSize(-(this.tsSvgHeight - this.padding.bottom), 1, 0)
     );
 
     // Add dashed lines and move the time tick text up
@@ -230,6 +249,16 @@ export class TimesliderComponent implements OnInit, OnChanges {
     this.sliderTimeTicksG.selectAll("path").remove();
     this.sliderTimeTicksG.selectAll("line").remove();
     this.sliderTimeTicksG.selectAll("text").attr("y", -75);
+
+    var ticksText = this.sliderTimeTicksG.selectAll("text");
+    ticksText.each((d, i, d3Element) => {
+      if (i === 0) {
+        d3.select(d3Element[0]).attr("x", 12.5);
+      }
+      if (i === 1) {
+        d3.select(d3Element[1]).attr("x", -12.5);
+      }
+    });
   }
 
   ngOnInit() {
@@ -283,6 +312,7 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     this.toggleText.text(this.textValue);
     this.updateSliderStartEnd();
+    this.moveToggleText(true);
     this.emitUpdate();
   }
 
@@ -307,8 +337,42 @@ export class TimesliderComponent implements OnInit, OnChanges {
     }
 
     // Move the slider start (or end?) to the new location
-    d3.select(".viewport").transition().call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
+    d3.select(".viewport")
+      .transition()
+      .call(this.brush.move, [this.x(this.sliderDateTimeStart.toDate()), this.x(this.sliderDateTimeEnd.toDate())]);
     this.drawTimeSliderTicks(this.sliderDateTimeStart, this.sliderDateTimeEnd);
+  }
+
+  moveToggleText(timeToggled: boolean) {
+    var selectionPosition = this.getSelectionPosition();
+    var selectionDimensions = this.getSelectionDimensions();
+    this.toggleText
+      .transition()
+      .attr("x", (d) => {
+        if (timeToggled) {
+          if (this.currentN === 15) {
+            return this.x(this.sliderDateTimeStart.toDate()) + selectionDimensions.width / 4;
+          } else if (this.currentN === 30) {
+            return this.x(this.sliderDateTimeStart.toDate()) + selectionDimensions.width;
+          }
+        }
+        return this.x(this.sliderDateTimeStart.toDate()) + selectionDimensions.width / 2;
+      })
+      .attr("y", (d) => {
+        return selectionPosition.y + selectionDimensions.height + 10;
+      });
+  }
+
+  displayToggleText(show: boolean) {
+    if (show) {
+      this.toggleText.classed("d-none", false);
+    } else {
+      setTimeout(() => {
+        (function (that) {
+          that.toggleText.classed("d-none", true);
+        })(this);
+      }, 3000);
+    }
   }
 
   private getSelectionPosition(): SvgPosition {

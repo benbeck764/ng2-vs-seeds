@@ -1,7 +1,14 @@
 <div class="row">
   <div class="col-lg-5">
-    <b>
-      IN FOCUS: Last {{n}} min, {{dateTimeNMins.format("D MMM, YYYY")}} {{dateTimeNow.format("h:mm")}} - {{dateTimeNMins.format("h:mm")}}
+    <b *ngIf="isRealTime">
+      IN FOCUS: Last {{n}} min,
+      {{dateTimeNMins.format("D MMM, YYYY")}}
+      {{dateTimeNow.format("h:mm")}} - {{dateTimeNMins.format("h:mm")}}
+    </b>
+    <b *ngIf="!isRealTime">
+      IN FOCUS: {{n}} min,
+      {{historicDateTimeNMins.format("D MMM, YYYY")}}
+      {{historicDateTimeNow.format("h:mm")}} - {{historicDateTimeNMins.format("h:mm")}}
     </b>
   </div>
   <div class="col-lg-7">
