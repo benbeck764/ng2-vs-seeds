@@ -11,10 +11,20 @@
       <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne">
         <div class="card-block">
           <div class="container mt-3 mb-2">
-            <pg-heartrate [n]="currentInterval" [newXTimeFrame]="currentDateTimeFrame" (timeIncremented)="timeIncremented($event)"></pg-heartrate>
+            <pg-heartrate
+                [n]="currentInterval"
+                [newXTimeFrame]="currentDateTimeFrame"
+                (timeIncremented)="timeIncremented($event)"
+                (hbDataUpdated)="hbDataUpdated($event)">
+            </pg-heartrate>
           </div>
           <div id="timeslider-div">
-            <pg-timeslider (nChanged)="intervalChanged($event)" (timeChanged)="timeChanged($event)" [newTime]="newTime"></pg-timeslider>
+            <pg-timeslider
+                (nChanged)="intervalChanged($event)"
+                (timeChanged)="timeChanged($event)"
+                [newTime]="newTime"
+                [newHbData]="newHbData">
+            </pg-timeslider>
           </div>
         </div>
       </div>

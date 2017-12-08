@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import * as moment from 'moment';
+import { DataPoint, HbDataPoint } from '../heartrate/heartrate.component';
 
 export class DateTimeFrame {
   public startDateTime: moment.Moment;
@@ -34,9 +35,16 @@ export class ParentComponent implements OnInit {
   private newTime: moment.Moment;
   private currentDateTimeFrame: DateTimeFrame;
 
+  private newHbData: HbDataPoint[];
+  private newUaData: DataPoint;
+
   constructor(private cdRef: ChangeDetectorRef) { }
 
   ngOnInit() { }
+
+  hbDataUpdated(newHbData: HbDataPoint[]) {
+    this.newHbData = newHbData;
+  }
 
   timeIncremented(newTime: moment.Moment): void {
     this.newTime = newTime;

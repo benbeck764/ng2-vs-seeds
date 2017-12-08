@@ -1,7 +1,7 @@
-import { Component, OnInit, OnChanges, Input, Output, EventEmitter, ViewEncapsulation, SimpleChange, ElementRef, Renderer2 } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, Output, EventEmitter, ViewEncapsulation, SimpleChange } from '@angular/core';
 import * as d3 from 'd3';
 import * as moment from 'moment';
-import { SvgDimension, SvgPosition } from "../heartrate/heartrate.component";
+import { SvgDimension, SvgPosition, HbDataPoint } from "../heartrate/heartrate.component";
 import { DateTimeFrame, IntervalChanged } from "../parent/parent.component";
 
 @Component({
@@ -11,33 +11,41 @@ import { DateTimeFrame, IntervalChanged } from "../parent/parent.component";
   encapsulation: ViewEncapsulation.None
 })
 export class TimesliderComponent implements OnInit, OnChanges {
-  
+
+  // Global TimeFrames
   private currentN: number = 15;
   private currentHours: number = 4;
-  private btnValue: string = "30 Minute View";
 
+  // Slider Text
   private toggleText;
   private textValue: string = "to 30 min";
 
-  private defaultDataValue: number = -1;
-  private margin: any = { top: 5, right: 20, bottom: 30, left: 30 };
-  private padding: any = { bottom: 20 };
-  private pixelsPerMinute: number = 15;
+  // Data-Related
+  private defaultDataValue: number = null;
 
+  // TODO -- LineCount should come from HB component? OR a global parent component...
+  private lineCount = 4;
+  private colors = ["purple", "blue", "green", "red"];
+  private dataHb;
+  private dataUa;
+  private compressionSecondsHb: number = 16;
+  
+  // Component Global Time
   private dateTimeNow: moment.Moment = moment().subtract(this.currentHours, 'hours');
   private dateTimeNHours: moment.Moment = this.dateTimeNow.clone().add(this.currentHours, 'hours');
 
+  // Slider-Related
   private isRealTime: boolean;
   private sliderDateTimeEnd: moment.Moment = this.dateTimeNHours.clone();
   private sliderDateTimeStart: moment.Moment = this.dateTimeNHours.clone().subtract(this.currentN, 'minutes');
   private sliderOffset: moment.Duration = moment.duration(this.dateTimeNow.clone().diff(this.sliderDateTimeStart.clone()));
 
-  private yMinHb: number = 30;
-  private yMaxHb: number = 240;
-
+  // Time-Slider SVG-Related
   private tsSvg;
   private tsSvgWidth = 1650;
   private tsSvgHeight = 125;
+  private margin: any = { top: 5, right: 20, bottom: 30, left: 30 };
+  private padding: any = { bottom: 20 };
   private g;
   private navG;
   private xAxisNavG;
@@ -46,14 +54,29 @@ export class TimesliderComponent implements OnInit, OnChanges {
   private viewPortSelection;
   private brush;
 
-  private x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNHours.toDate()]).range([0, this.tsSvgWidth]);
-  private yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.tsSvgHeight, 0]);
+  // Compressed View SVG-Related
+  private compressedHbHeight = 45;
+  private lineHb;
+  private pathsGHb;
 
+  // Time Scale Constants
+  private yMinHb: number = 30;
+  private yMaxHb: number = 240;
+  private yMinUa: number = 0;
+  private yMaxUa: number = 100;
+
+  // Time Scales
+  private x = d3.scaleTime().domain([this.dateTimeNow.toDate(), this.dateTimeNHours.toDate()]).range([0, this.tsSvgWidth]);
+  private yHb = d3.scaleLinear().domain([this.yMinHb, this.yMaxHb]).range([this.tsSvgHeight, this.tsSvgHeight - this.compressedHbHeight]);
+  private yUa = d3.scaleLinear().domain([this.yMinUa, this.yMaxUa]).range([this.tsSvgHeight, 0]);
+
+  // Components @Input & @Outputs
   @Input() newTime: moment.Moment;
+  @Input() newHbData: HbDataPoint[];
   @Output() nChanged = new EventEmitter<IntervalChanged>();
   @Output() timeChanged = new EventEmitter<DateTimeFrame>();
 
-  constructor(private _renderer: Renderer2, private _elementRef: ElementRef) { }
+  constructor() { }
 
   findClosestSnapWindow(newTimeFrame: DateTimeFrame): DateTimeFrame {
 
@@ -110,6 +133,17 @@ export class TimesliderComponent implements OnInit, OnChanges {
   }
 
   initTimeSliderGraph() {
+
+    // Initialize Data Array w/ Default Values (null)
+    this.dataHb = new Array(this.lineCount);
+    for (var i = 0; i < this.lineCount; i++) {
+      this.dataHb[i] = d3.range((this.currentHours * 3600) / this.compressionSecondsHb).map(d => {
+        var dataPoint = new HbDataPoint(-1);
+        dataPoint.timestamp = moment();
+        dataPoint.value = null;
+        return dataPoint;
+      });
+    }
 
     // Create SVG
     d3.selectAll("#timeslider-chart > svg").data([]).exit().remove();
@@ -209,6 +243,37 @@ export class TimesliderComponent implements OnInit, OnChanges {
       .on("mouseleave", (d) => {
         this.displayToggleText(false);
       });
+
+    // Initialzie Compressed HB/UA Views
+    this.initCompressedHbView();
+  }
+
+  initCompressedHbView() {
+     // Setup HeartBeat Line
+    this.lineHb = d3.line()
+      .defined((d: HbDataPoint) => d.value !== null)
+      .curve(d3.curveBasis)
+      .x((d: HbDataPoint, i) => {
+        return this.x(d.timestamp.toDate());
+      })
+      .y((d: HbDataPoint, i) => {
+        return this.yHb(d.value);
+      });
+
+    // Setup SVG Group that will contain HB line(s)
+    this.pathsGHb = this.g.append("g")
+      .attr("class", "hb-paths-g");
+
+    // Initialize the Paths
+    for (var i = 0; i < this.lineCount; i++) {
+      var myData = this.dataHb[i];
+      var it = this.pathsGHb.append("g")
+        .attr("clip-path", "url(#clip)")
+        .append("path")
+        .data([myData])
+        .attr("class", "line " + this.colors[i] + "-line")
+        .attr("data-color-idx", i);
+    }
   }
 
   drawXAxis() {
@@ -272,6 +337,25 @@ export class TimesliderComponent implements OnInit, OnChanges {
       //if (!newTime.firstChange) { this.updateTime(newTime.currentValue.toDate()); }
       this.updateTime(newTime.currentValue.toDate());
     }
+
+    var newHbData = changes['newHbData'];
+    if (typeof (newHbData) !== "undefined" && typeof (newHbData.currentValue) !== "undefined") {
+      this.updateHbData(newHbData.currentValue);
+    }
+  }
+
+  updateHbData(newHbData: HbDataPoint[]) {
+    // TODO -- Implement after setting up SVG to draw HB Lines
+    for (var i = 0; i < this.lineCount; i++) {
+      // Add data to TimeSlider HB Data Array
+      var dpByColorIdx = newHbData.find(dp => dp.colorIndex === i);
+      this.dataHb[i].push(dpByColorIdx);
+
+      // Update line
+      var selectedPath = this.pathsGHb.select("path[data-color-idx='" + i + "']");
+      selectedPath.attr("d", this.lineHb);
+      this.dataHb[i].shift(); // TODO -- Do we want to shift or hold onto all?
+    }
   }
 
   updateTime(newTime: moment.Moment) {
@@ -301,12 +385,10 @@ export class TimesliderComponent implements OnInit, OnChanges {
 
     if (this.currentN === 15) {
       this.currentN = 30;
-      this.btnValue = "15 Minute View";
       this.textValue = "to 15 min";
     }
     else if (this.currentN === 30) {
       this.currentN = 15;
-      this.btnValue = "30 Minute View";
       this.textValue = "to 30 min";
     }
 

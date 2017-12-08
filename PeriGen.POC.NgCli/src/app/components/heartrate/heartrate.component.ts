@@ -25,9 +25,18 @@ export class DataPoint {
   public timestamp: moment.Moment;
   public value: number;
 
-  constructor() {
-    this.timestamp = moment();
-    this.value = -1;
+  constructor(timeStamp?: moment.Moment, value?: number) {
+    this.timestamp = timeStamp ? timeStamp: moment();
+    this.value = value ? value: null;
+  }
+}
+
+export class HbDataPoint extends DataPoint {
+  public colorIndex: number;
+
+  constructor(colorIndex, dataPoint?: DataPoint) {
+    dataPoint ? super(dataPoint.timestamp, dataPoint.value) : super();
+    this.colorIndex = colorIndex;
   }
 }
 
@@ -43,11 +52,16 @@ export class HeartrateComponent implements OnInit, OnChanges {
   @Input() newXTimeFrame: DateTimeFrame;
   @Output() timeIncremented = new EventEmitter<moment.Moment>();
 
+  @Output() hbDataUpdated = new EventEmitter<HbDataPoint[]>();
+  @Output() uaDataUpdated = new EventEmitter<DataPoint>();
+  private hbDataEmitCount: number = 1;
+  private hbDataEmitRateSeconds: number = 16;
+
   private emitCount: number = 1;
   private isRealTime: boolean = true;
 
   private parentNativeElement: any;
-  private defaultDataValue = -1000;
+  private defaultDataValue = null;
   private margin = { top: 5, right: 20, bottom: 30, left: 30 };
   private dateTimeNow = moment().subtract(this.n, 'minutes');
   private dateTimeNMins = this.dateTimeNow.clone().add(this.n, 'minutes');
@@ -56,9 +70,9 @@ export class HeartrateComponent implements OnInit, OnChanges {
   private historicDateTimeNMins: moment.Moment;
 
   // Data Arrays to Hold Chart Data
-  private dataFifteenMin;
-  private dataThirtyMin;
-  private dataAll;
+  private dataFifteenMin: DataPoint[][];
+  private dataThirtyMin: DataPoint[][];
+  private dataAll: DataPoint[][];
   private dataUaFifteenMin;
   private dataUaThirtyMin;
 
@@ -126,7 +140,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
   initHeartBeatGraph(): void {
 
-    // Initialize Data Array w/ Default Values (-1)
+    // Initialize Data Array w/ Default Values (null)
     this.dataFifteenMin = new Array(this.lineCount);
     this.dataThirtyMin = new Array(this.lineCount);
     this.dataAll = new Array(this.lineCount);
@@ -173,10 +187,8 @@ export class HeartrateComponent implements OnInit, OnChanges {
     // Setup HeartBeat Line
     this.line = d3.line()
       .curve(d3.curveBasis)
+      .defined((d: DataPoint) => d.value !== null)
       .x((d: DataPoint, i) => {
-        //var startingTime = this.dateTimeNow.clone();
-        //var time = startingTime.add(i * 250, 'milliseconds').toDate();
-        //return this.x(time);
         return this.x(d.timestamp.toDate());
       })
       .y((d: DataPoint, i) => {
@@ -298,6 +310,7 @@ export class HeartrateComponent implements OnInit, OnChanges {
     // Setup UA Line
     this.lineUa = d3.line()
       .curve(d3.curveBasis)
+      .defined((d) => d !== null)
       .x((d, i) => {
         var startingTime = this.dateTimeNow.clone();
         var time = startingTime.add(i, 'seconds').toDate();
@@ -573,11 +586,11 @@ export class HeartrateComponent implements OnInit, OnChanges {
     }
 
     // Tick Uterine Activity Graph Data every 1000 milliseconds
-    var myData = this.dataUaFifteenMin;
+    var myDataUa = this.dataUaFifteenMin;
     var it = this.pathsGUa.append("g")
       .attr("clip-path", "url(#ua-clip)")
       .append("path")
-        .data([myData])
+        .data([myDataUa])
         .attr("class", "line grey-line")
       .transition()
         .duration(1000 / this.ticksPerSecondUa)
@@ -643,7 +656,9 @@ export class HeartrateComponent implements OnInit, OnChanges {
 
     selectedg.attr("d", this.line);
 
-    selectedActive.attr("transform", "translate(" + this.x(this.dateTimeNow.toDate()) + ",0)")
+    selectedActive
+      // TODO -- Do I even need this?
+      //.attr("transform", "translate(" + this.x(this.dateTimeNow.toDate()) + ",0)")
       .transition()
         .on("start", (dataArray, index, d3Element) => {
           this.tick(d3Element[0]);
@@ -704,8 +719,26 @@ export class HeartrateComponent implements OnInit, OnChanges {
       this.baby3ticked = false;
       this.baby4ticked = false;
 
+      // Send the HB data to Compressed View (every 16 [configurable] seconds)
+      if ((this.hbDataEmitCount / this.ticksPerSecondHb) % this.hbDataEmitRateSeconds === 0) {
+        this.emitHbData();
+        this.hbDataEmitCount = 1;
+      }
+      this.hbDataEmitCount++;
+
       this.redrawTimeScale();
     }
+  }
+
+  emitHbData() {
+    // Get the latest data from each array
+    var dataPoints: HbDataPoint[] = [];
+    for (var i = 0; i < this.lineCount; i++) {
+      var lastDataPoint = this.dataAll[i][this.dataAll[i].length -  1];
+      var hbDataPoint = new HbDataPoint(i, lastDataPoint);
+      dataPoints.push(hbDataPoint);     
+    }
+    this.hbDataUpdated.emit(dataPoints);
   }
 
   redrawTimeScale(): void {
